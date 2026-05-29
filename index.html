@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartCrop Studio</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://storage.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- JSZip for "Download All" archive export -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <!-- ─────────────── SIDEBAR ─────────────── -->
+    <aside class="sidebar">
+      <div class="brand">
+        <svg class="brand-logo" viewBox="0 0 64 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="SmartCrop Studio logo">
+          <defs>
+            <linearGradient id="scBody" x1="6" y1="6" x2="58" y2="48" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#62E9FF"/><stop offset="1" stop-color="#00A4E3"/>
+            </linearGradient>
+            <radialGradient id="scLens" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20.5 24.5) rotate(45) scale(17)">
+              <stop stop-color="#9CF3FF"/><stop offset="1" stop-color="#00B6E8"/>
+            </radialGradient>
+          </defs>
+          <path d="M18 12 q0 -6 6 -6 h8 q6 0 6 6" stroke="url(#scBody)" stroke-width="4" stroke-linecap="round"/>
+          <rect x="42" y="8.6" width="11" height="3.4" rx="1.7" fill="url(#scBody)"/>
+          <rect x="5" y="12" width="54" height="34" rx="8" stroke="url(#scBody)" stroke-width="4"/>
+          <circle cx="25" cy="29" r="11.5" fill="url(#scLens)"/>
+          <ellipse cx="20.6" cy="24.4" rx="3.6" ry="2.3" fill="#ffffff" fill-opacity="0.8" transform="rotate(-30 20.6 24.4)"/>
+        </svg>
+        <span class="brand-word"><span class="bw-1">SmartCrop</span><span class="bw-2">STUDIO</span></span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard"><span class="nav-ico">▦</span> Dashboard</button>
+        <button class="nav-item" data-view="queue"><span class="nav-ico">▤</span> Batch Queue</button>
+        <button class="nav-item" data-view="presets"><span class="nav-ico">◇</span> Presets</button>
+        <button class="nav-item" data-view="models"><span class="nav-ico">✦</span> AI Models</button>
+        <button class="nav-item" data-view="exports"><span class="nav-ico">⤓</span> Exports</button>
+        <button class="nav-item" data-view="settings"><span class="nav-ico">⚙</span> Settings</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="engineStatus" class="engine-status loading">
+          <span class="dot"></span><span class="engine-label">Loading AI engine…</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ─────────────── MAIN ─────────────── -->
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Dashboard</h1>
+          <p id="viewSub" class="sub">One-click portrait standardization.</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="resetBtn" class="btn ghost">Reset</button>
+          <button id="generateBtn" class="btn primary" disabled>⚡ Generate</button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section class="view active" id="view-dashboard">
+        <div class="cards">
+          <div class="card stat"><span class="stat-label">Total Images</span><span class="stat-value" id="statTotal">0</span></div>
+          <div class="card stat"><span class="stat-label">Processed</span><span class="stat-value ok" id="statDone">0</span></div>
+          <div class="card stat"><span class="stat-label">Failed</span><span class="stat-value bad" id="statFail">0</span></div>
+          <div class="card stat"><span class="stat-label">Success Rate</span><span class="stat-value accent" id="statRate">—</span></div>
+        </div>
+
+        <div class="card perf-card" id="perfCard">
+          <div class="card-title-row">
+            <h3 class="card-title">Performance</h3>
+            <span class="muted" id="hwInfo">—</span>
+          </div>
+          <div class="perf-grid">
+            <div class="perf-cell"><span class="perf-label">Throughput</span><span class="perf-val" id="perfIps">—</span><span class="perf-unit">img/s</span></div>
+            <div class="perf-cell"><span class="perf-label">Processed</span><span class="perf-val" id="perfDone">0</span></div>
+            <div class="perf-cell"><span class="perf-label">Remaining</span><span class="perf-val" id="perfRem">0</span></div>
+            <div class="perf-cell"><span class="perf-label">Elapsed</span><span class="perf-val" id="perfElapsed">0.0s</span></div>
+            <div class="perf-cell"><span class="perf-label">ETA</span><span class="perf-val" id="perfEta">—</span></div>
+            <div class="perf-cell"><span class="perf-label">Avg quality</span><span class="perf-val" id="perfQ">—</span></div>
+            <div class="perf-cell"><span class="perf-label">JS heap</span><span class="perf-val" id="perfHeap">—</span></div>
+          </div>
+          <div class="bench" id="bench">
+            <span>Decode <b id="bDecode">—</b></span>
+            <span>Detect <b id="bDetect">—</b></span>
+            <span>Compose+Encode <b id="bEncode">—</b></span>
+            <span>Avg/img <b id="bAvg">—</b></span>
+            <span>Workers <b id="bWorkers">—</b></span>
+            <span>Accel <b id="bAccel" class="accel">—</b></span>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <!-- LEFT: input + queue -->
+          <div class="col">
+            <div class="card">
+              <h3 class="card-title">Workspace</h3>
+              <div id="dropzone" class="dropzone">
+                <div class="dz-inner">
+                  <div class="dz-ico">⤒</div>
+                  <p class="dz-title">Drop portraits here</p>
+                  <p class="dz-hint">or click to select files / a folder · unlimited batch</p>
+                </div>
+                <input id="fileInput" type="file" accept="image/*" multiple hidden />
+                <input id="folderInput" type="file" accept="image/*" multiple webkitdirectory hidden />
+              </div>
+              <div class="dz-buttons">
+                <button class="btn ghost sm" id="pickFiles">Select files</button>
+                <button class="btn ghost sm" id="pickFolder">Select folder</button>
+              </div>
+              <button class="btn primary genwide" id="genWorkspace" disabled>⚡ Generate Portraits</button>
+            </div>
+
+            <div class="card">
+              <div class="card-title-row">
+                <h3 class="card-title">Generated Results</h3>
+                <span class="muted" id="queueCount">0 items</span>
+              </div>
+              <div id="queue" class="queue">
+                <p class="empty">Upload photos, then Generate — results appear here.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- MIDDLE: preview -->
+          <div class="col grow">
+            <div class="card preview-card">
+              <div class="card-title-row">
+                <h3 class="card-title">Preview</h3>
+                <div class="seg" id="previewMode">
+                  <button class="seg-btn active" data-mode="slider">Compare</button>
+                  <button class="seg-btn" data-mode="after">After</button>
+                  <button class="seg-btn" data-mode="before">Before</button>
+                </div>
+              </div>
+              <div id="previewStage" class="preview-stage">
+                <p class="empty" id="previewEmpty">Select an item from the queue to preview.</p>
+                <div id="compareWrap" class="compare-wrap hidden">
+                  <img id="imgBefore" class="compare-img" alt="before" />
+                  <div id="afterClip" class="after-clip"><img id="imgAfter" class="compare-img" alt="after" /></div>
+                  <input id="slider" class="compare-slider" type="range" min="0" max="100" value="50" />
+                  <span class="tag tag-before">BEFORE</span>
+                  <span class="tag tag-after">AFTER</span>
+                </div>
+              </div>
+              <div id="previewMeta" class="preview-meta"></div>
+              <div id="previewExport" class="preview-export hidden">
+                <button class="btn primary" id="previewDownload">⬇ Download</button>
+                <span class="muted" id="exportHint"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: properties -->
+          <div class="col">
+            <div class="card">
+              <h3 class="card-title">Properties</h3>
+
+              <label class="field-label">Output Size</label>
+              <div class="preset-list" id="presetPicker"></div>
+
+              <label class="field-label">Background</label>
+              <select id="bgMode" class="select">
+                <option value="original">Keep original</option>
+                <option value="white">Solid white</option>
+                <option value="color">Custom color</option>
+                <option value="transparent">Transparent (PNG)</option>
+              </select>
+              <input id="bgColor" type="color" class="color-input hidden" value="#00d1ff" />
+              <p id="bgWarn" class="bg-warn hidden">⚠ Transparent background requires PNG export — format locked to PNG.</p>
+
+              <label class="field-label">Export Format</label>
+              <select id="format" class="select">
+                <option value="image/png">PNG</option>
+                <option value="image/jpeg">JPG</option>
+              </select>
+
+              <label class="field-label">Quality <span id="qualityVal" class="muted">92%</span></label>
+              <input id="quality" class="range" type="range" min="50" max="100" value="92" />
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Export Settings</h3>
+              <label class="toggle"><input type="checkbox" id="opt-preserve" checked /><span>Preserve Original Filenames <em>(no suffixes)</em></span></label>
+              <label class="toggle"><input type="checkbox" id="opt-zip" /><span>Export as ZIP</span></label>
+              <label class="toggle"><input type="checkbox" id="opt-transparent" /><span>Transparent Background <em>(→ PNG)</em></span></label>
+              <div id="zipNameRow">
+                <label class="field-label">ZIP name</label>
+                <input id="zipName" class="select" type="text" value="SmartCrop_Export.zip" />
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">AI Settings</h3>
+              <label class="toggle"><input type="checkbox" id="ai-compose" checked /><span>Smart Composition</span></label>
+              <label class="toggle"><input type="checkbox" id="ai-identity" checked disabled /><span>Preserve Identity <em>(always on)</em></span></label>
+              <label class="toggle"><input type="checkbox" id="ai-level" checked /><span>Eye Leveling</span></label>
+              <label class="toggle"><input type="checkbox" id="ai-edge" checked /><span>Edge Refinement</span></label>
+              <label class="toggle"><input type="checkbox" id="ai-bg" /><span>Background Understanding</span></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BATCH QUEUE (full) -->
+      <section class="view" id="view-queue">
+        <div class="card">
+          <div class="card-title-row">
+            <h3 class="card-title">All Items</h3>
+            <span class="muted" id="queueCount2">0 items</span>
+          </div>
+          <div id="queueFull" class="queue-grid"><p class="empty">Queue is empty.</p></div>
+        </div>
+      </section>
+
+      <!-- PRESETS -->
+      <section class="view" id="view-presets">
+        <div class="cards" id="presetCards"></div>
+      </section>
+
+      <!-- AI MODELS -->
+      <section class="view" id="view-models">
+        <div class="cards" id="modelCards"></div>
+      </section>
+
+      <!-- EXPORTS -->
+      <section class="view" id="view-exports">
+        <div class="card">
+          <h3 class="card-title">Export</h3>
+          <p class="muted">Original filenames are always preserved. Use Export Settings (Properties) to toggle ZIP / transparency.</p>
+          <div class="export-actions">
+            <button class="btn primary" id="exportZip">⤓ Export All</button>
+            <button class="btn ghost" id="exportSheet">▦ Build Team Grid</button>
+            <select id="gridSize" class="select inline">
+              <option value="4x5">4 × 5</option>
+              <option value="5x5">5 × 5</option>
+              <option value="10x10">10 × 10</option>
+            </select>
+          </div>
+          <div id="sheetWrap" class="sheet-wrap hidden">
+            <canvas id="sheetCanvas"></canvas>
+            <button class="btn ghost sm" id="downloadSheet">Download Grid PNG</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="card">
+          <h3 class="card-title">Settings</h3>
+          <p class="muted">SmartCrop Studio runs entirely in your browser — your photos never leave your device.</p>
+          <label class="toggle"><input type="checkbox" id="set-autoselect" checked /><span>Auto-preview newly processed images</span></label>
+          <label class="toggle"><input type="checkbox" id="set-keepfailed" checked /><span>Keep failed items in queue</span></label>
+          <div class="about">
+            <p><strong>Engine:</strong> MediaPipe Face Landmarker (478 pts) + Canvas composition engine</p>
+            <p><strong>Identity safe:</strong> original pixels are never altered, smoothed, or regenerated.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── FOOTER ─────────────── -->
+      <footer class="site-footer">
+        <div class="foot-col foot-left">
+          <svg class="foot-logo" viewBox="0 0 64 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="fScBody" x1="6" y1="6" x2="58" y2="48" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#62E9FF"/><stop offset="1" stop-color="#00A4E3"/>
+              </linearGradient>
+              <radialGradient id="fScLens" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20.5 24.5) rotate(45) scale(17)">
+                <stop stop-color="#9CF3FF"/><stop offset="1" stop-color="#00B6E8"/>
+              </radialGradient>
+            </defs>
+            <path d="M18 12 q0 -6 6 -6 h8 q6 0 6 6" stroke="url(#fScBody)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="42" y="8.6" width="11" height="3.4" rx="1.7" fill="url(#fScBody)"/>
+            <rect x="5" y="12" width="54" height="34" rx="8" stroke="url(#fScBody)" stroke-width="4"/>
+            <circle cx="25" cy="29" r="11.5" fill="url(#fScLens)"/>
+            <ellipse cx="20.6" cy="24.4" rx="3.6" ry="2.3" fill="#ffffff" fill-opacity="0.8" transform="rotate(-30 20.6 24.4)"/>
+          </svg>
+          <div class="foot-text">
+            <div class="foot-strong">© 2026 SmartCrop Studio</div>
+            <div class="foot-sub">AI Portrait Alignment &amp; Passport Automation Platform</div>
+          </div>
+        </div>
+
+        <div class="foot-col foot-center">
+          <div class="foot-text">
+            <div class="foot-strong">Version 1.0</div>
+            <div class="foot-sub">Built for Designers, Schools, Studios &amp; HR Teams</div>
+          </div>
+        </div>
+
+        <div class="foot-col foot-right">
+          <span class="foot-credit" tabindex="0" data-tip="Founder &amp; Product Architect of SmartCrop Studio">
+            Design &amp; Developed by <span class="foot-name">Satyam</span>
+          </span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- hidden work canvas -->
+  <canvas id="work" hidden></canvas>
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
