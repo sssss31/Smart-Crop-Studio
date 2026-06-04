@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartCrop Studio</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://storage.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+:root {
+  --bg: #0B1020;
+  --bg-2: #0e1426;
+  --card: #111827;
+  --card-2: #161f33;
+  --line: #1f2a44;
+  --text: #e6ecff;
+  --muted: #8a97b8;
+  --accent: #00D1FF;
+  --accent-dim: #0aa6c9;
+  --ok: #38e8a0;
+  --bad: #ff5d6c;
+  --warn: #ffc857;
+  --glow: 0 0 0 1px rgba(0,209,255,.25), 0 0 24px rgba(0,209,255,.18);
+  --radius: 14px;
+  font-family: "Sora", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: radial-gradient(1200px 600px at 80% -10%, rgba(0,209,255,.08), transparent 60%), var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { display: flex; min-height: 100vh; }
+
+/* ───── Sidebar ───── */
+.sidebar {
+  width: 230px; flex-shrink: 0;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg));
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; padding: 20px 14px;
+  position: sticky; top: 0; height: 100vh;
+}
+.brand { display: flex; align-items: center; gap: 11px; padding: 4px 6px 22px; }
+.brand-logo { width: 40px; height: auto; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(0,209,255,.35)); transition: filter .25s ease, transform .25s ease; }
+.brand:hover .brand-logo { filter: drop-shadow(0 0 12px rgba(0,209,255,.7)); transform: translateY(-1px); }
+.brand-word { display: flex; flex-direction: column; line-height: 1; }
+.brand-word .bw-1 { font-weight: 700; font-size: 16px; letter-spacing: -.2px;
+  background: linear-gradient(180deg, #8af0ff, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand-word .bw-2 { font-weight: 600; font-size: 9px; letter-spacing: 4.5px; color: var(--muted); margin-top: 3px; }
+.nav { display: flex; flex-direction: column; gap: 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  background: transparent; border: 0; color: var(--muted);
+  text-align: left; padding: 10px 12px; border-radius: 10px;
+  font-size: 14px; cursor: pointer; transition: .15s; font-weight: 500;
+}
+.nav-item:hover { background: var(--card); color: var(--text); }
+.nav-item.active { background: var(--card-2); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+.nav-ico { width: 18px; text-align: center; color: var(--accent); opacity: .85; }
+.sidebar-foot { margin-top: auto; padding-top: 16px; }
+.engine-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 8px 10px; background: var(--card); border-radius: 10px; border: 1px solid var(--line); }
+.engine-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 10px var(--warn); }
+.engine-status.ready .dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+.engine-status.error .dot { background: var(--bad); box-shadow: 0 0 10px var(--bad); }
+.engine-status.loading .dot { animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* ───── Main ───── */
+.main { flex: 1; padding: 22px 26px 40px; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
+.main > .view.active { flex: 0 0 auto; }
+.topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
+.topbar h1 { font-size: 22px; font-weight: 700; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.topbar-actions { display: flex; gap: 10px; }
+
+.btn {
+  border: 1px solid var(--line); background: var(--card); color: var(--text);
+  padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: .15s;
+}
+.btn:hover { border-color: var(--accent-dim); }
+.btn.primary { background: linear-gradient(180deg, var(--accent), var(--accent-dim)); color: #021019; border: 0; box-shadow: var(--glow); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 7px 12px; font-size: 13px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+
+/* ───── Views ───── */
+.view { display: none; }
+.view.active { display: block; animation: fade .2s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } }
+
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.card {
+  background: linear-gradient(180deg, var(--card), var(--bg-2));
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;
+}
+.card-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; letter-spacing: .2px; }
+.card-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.card-title-row .card-title { margin: 0; }
+
+.stat { display: flex; flex-direction: column; gap: 8px; }
+.stat-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+.stat-value { font-size: 30px; font-weight: 800; }
+.stat-value.ok { color: var(--ok); } .stat-value.bad { color: var(--bad); } .stat-value.accent { color: var(--accent); }
+
+/* performance panel */
+.perf-card { margin-bottom: 18px; }
+.perf-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 14px; }
+.perf-cell { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+.perf-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.perf-val { font-size: 19px; font-weight: 800; }
+.perf-unit { font-size: 10px; color: var(--muted); }
+.bench { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--muted); padding-top: 12px; border-top: 1px solid var(--line); }
+.bench b { color: var(--text); font-weight: 600; }
+.bench .accel { color: var(--accent); }
+@media (max-width: 1100px) { .perf-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ───── Workspace layout ───── */
+.workspace { display: grid; grid-template-columns: 300px 1fr 280px; gap: 14px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 14px; }
+.col.grow { min-width: 0; }
+
+/* dropzone */
+.dropzone {
+  border: 2px dashed var(--line); border-radius: 12px; padding: 26px 14px;
+  text-align: center; cursor: pointer; transition: .15s; background: rgba(0,209,255,.02);
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(0,209,255,.07); }
+.dz-ico { font-size: 28px; color: var(--accent); }
+.dz-title { font-weight: 600; margin-top: 8px; }
+.dz-hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.dz-buttons { display: flex; gap: 8px; margin-top: 12px; }
+
+/* queue */
+.queue { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+.q-item { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; transition: .12s; }
+.q-item:hover { border-color: var(--accent-dim); }
+.q-item.sel { border-color: var(--accent); box-shadow: var(--glow); }
+.q-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--bg); flex-shrink: 0; }
+.q-info { min-width: 0; flex: 1; }
+.q-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-status { font-size: 11px; }
+.q-status.pending { color: var(--muted); }
+.q-status.processing { color: var(--warn); }
+.q-status.done { color: var(--ok); }
+.q-status.failed { color: var(--bad); }
+.q-badge { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.q-badge.pending { background: var(--muted); }
+.q-badge.processing { background: var(--warn); animation: pulse 1s infinite; }
+.q-badge.done { background: var(--ok); }
+.q-badge.failed { background: var(--bad); }
+
+/* preview */
+.preview-card { min-height: 480px; display: flex; flex-direction: column; }
+.preview-stage { flex: 1; display: flex; align-items: center; justify-content: center; background:
+  linear-gradient(45deg,#0c1322 25%,transparent 25%) -10px 0/20px 20px,
+  linear-gradient(-45deg,#0c1322 25%,transparent 25%) -10px 0/20px 20px,
+  linear-gradient(45deg,transparent 75%,#0c1322 75%) -10px 0/20px 20px,
+  linear-gradient(-45deg,transparent 75%,#0c1322 75%) -10px 0/20px 20px, var(--bg);
+  border-radius: 12px; position: relative; overflow: hidden; min-height: 360px;
+}
+.compare-wrap { position: relative; max-width: 100%; max-height: 460px; line-height: 0; }
+.compare-img { display: block; max-width: 100%; max-height: 460px; width: auto; height: auto; user-select: none; -webkit-user-drag: none; }
+.after-clip { position: absolute; inset: 0; overflow: hidden; width: 50%; }
+.after-clip .compare-img { position: absolute; top: 0; left: 0; max-width: none; }
+.compare-slider { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; }
+.compare-wrap::after { /* slider handle line */
+  content: ""; position: absolute; top: 0; bottom: 0; left: var(--split,50%);
+  width: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); pointer-events: none;
+}
+.tag { position: absolute; top: 8px; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 3px 7px; border-radius: 6px; background: rgba(0,0,0,.6); }
+.tag-before { left: 8px; color: var(--muted); }
+.tag-after { right: 8px; color: var(--accent); }
+.preview-meta { margin-top: 12px; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 14px; }
+.preview-meta b { color: var(--text); font-weight: 600; }
+.preview-export { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
+.preview-export .btn { font-size: 15px; padding: 12px 22px; }
+.genwide { width: 100%; margin-top: 12px; padding: 12px; font-size: 15px; }
+
+/* mode segmented control */
+.seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+.seg-btn { background: transparent; border: 0; color: var(--muted); font-size: 12px; padding: 5px 10px; border-radius: 7px; cursor: pointer; font-weight: 600; }
+.seg-btn.active { background: var(--card-2); color: var(--text); }
+
+/* properties */
+.field-label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+.field-label:first-of-type { margin-top: 0; }
+.select, .color-input { width: 100%; background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 9px 10px; border-radius: 9px; font-size: 13px; }
+.select.inline { width: auto; }
+.color-input { height: 40px; cursor: pointer; }
+.range { width: 100%; accent-color: var(--accent); }
+.preset-list { display: flex; flex-direction: column; gap: 8px; }
+.preset-opt { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 13px; transition: .12s; }
+.preset-opt:hover { border-color: var(--accent-dim); }
+.preset-opt.sel { border-color: var(--accent); box-shadow: var(--glow); }
+.preset-opt .dim { color: var(--muted); font-size: 11px; }
+
+.toggle { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 13px; cursor: pointer; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+.toggle em { color: var(--muted); font-style: normal; font-size: 11px; }
+.bg-warn { margin-top: 8px; font-size: 12px; color: var(--warn); background: rgba(255,200,87,.08); border: 1px solid rgba(255,200,87,.25); padding: 8px 10px; border-radius: 8px; line-height: 1.4; }
+#zipNameRow { margin-top: 4px; }
+#zipName { font-family: inherit; }
+
+/* misc */
+.muted { color: var(--muted); font-size: 13px; }
+.empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
+.hidden { display: none !important; }
+
+/* queue full grid */
+.queue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 12px; }
+.queue-grid .q-item { flex-direction: column; align-items: stretch; }
+.queue-grid .q-thumb { width: 100%; height: 130px; }
+
+/* preset / model cards */
+.cards.three { grid-template-columns: repeat(3, 1fr); }
+.info-card h4 { font-size: 15px; margin-bottom: 6px; }
+.info-card .pill { display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 20px; background: var(--card-2); color: var(--accent); margin: 2px 4px 2px 0; }
+.info-card p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.info-card .status-pill { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 700; }
+.status-pill.live { background: rgba(56,232,160,.12); color: var(--ok); }
+.status-pill.soon { background: rgba(255,200,87,.12); color: var(--warn); }
+
+/* exports */
+.export-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0 4px; }
+.sheet-wrap { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.sheet-wrap canvas { max-width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.about { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+/* toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--card-2); border: 1px solid var(--accent-dim); color: var(--text);
+  padding: 12px 18px; border-radius: 12px; font-size: 13px; box-shadow: var(--glow);
+  opacity: 0; pointer-events: none; transition: .25s; z-index: 50; max-width: 90vw;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 1100px) { .workspace { grid-template-columns: 1fr; } .cards { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 760px) { .sidebar { display: none; } }
+
+/* ───────────────────────── Footer ───────────────────────── */
+.site-footer {
+  margin: 34px -26px -40px;          /* bleed past .main padding to full width */
+  margin-top: auto;                   /* always pin to the bottom */
+  padding: 22px 30px;
+  display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap;
+  background: rgba(17, 24, 39, .55);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-top: 1px solid rgba(0, 209, 255, .35);
+  box-shadow: 0 -1px 26px rgba(0, 209, 255, .12), inset 0 1px 0 rgba(255, 255, 255, .03);
+  font-family: "Inter", "Sora", system-ui, sans-serif;
+}
+.foot-col { display: flex; align-items: center; gap: 12px; flex: 1 1 0; min-width: 0; }
+.foot-center { justify-content: center; text-align: center; }
+.foot-right { justify-content: flex-end; text-align: right; }
+.foot-logo { width: 38px; height: auto; flex-shrink: 0; transition: filter .3s ease, transform .3s ease; }
+.site-footer:hover .foot-logo { filter: drop-shadow(0 0 10px rgba(0, 209, 255, .75)); transform: translateY(-1px) scale(1.03); }
+.foot-strong { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: .1px; white-space: nowrap; }
+.foot-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+
+/* "Design & Developed by Satyam" */
+.foot-credit { position: relative; font-size: 13px; font-weight: 500; color: var(--muted); cursor: default; outline: none; white-space: nowrap; }
+.foot-name { color: var(--accent); font-weight: 600; transition: text-shadow .25s ease, color .25s ease; }
+.foot-credit:hover .foot-name, .foot-credit:focus-visible .foot-name {
+  color: #6fe9ff; text-shadow: 0 0 12px rgba(0, 209, 255, .85), 0 0 24px rgba(0, 209, 255, .4);
+}
+/* tooltip */
+.foot-credit::after {
+  content: attr(data-tip);
+  position: absolute; right: 0; bottom: calc(100% + 10px);
+  background: var(--card-2); color: var(--text);
+  font-size: 11.5px; font-weight: 500; white-space: nowrap;
+  padding: 8px 11px; border-radius: 9px;
+  border: 1px solid rgba(0, 209, 255, .3); box-shadow: var(--glow);
+  opacity: 0; transform: translateY(4px); pointer-events: none; transition: .2s ease;
+}
+.foot-credit::before {
+  content: ""; position: absolute; right: 22px; bottom: calc(100% + 4px);
+  border: 6px solid transparent; border-top-color: var(--card-2);
+  opacity: 0; transition: .2s ease;
+}
+.foot-credit:hover::after, .foot-credit:focus-visible::after { opacity: 1; transform: translateY(0); }
+.foot-credit:hover::before, .foot-credit:focus-visible::before { opacity: 1; }
+
+@media (max-width: 820px) {
+  .site-footer { flex-direction: column; text-align: center; gap: 18px; padding: 24px 20px; }
+  .foot-col, .foot-left, .foot-center, .foot-right { justify-content: center; text-align: center; flex: 1 1 auto; }
+  .foot-credit::after { right: 50%; transform: translateX(50%) translateY(4px); }
+  .foot-credit:hover::after, .foot-credit:focus-visible::after { transform: translateX(50%) translateY(0); }
+  .foot-credit::before { right: 50%; transform: translateX(50%); }
+}
+@media (max-width: 760px) {
+  .site-footer { margin-left: -26px; margin-right: -26px; }
+}
+
+.pipeline-status { margin-top: 8px; font-size: 11px; color: var(--accent); min-height: 14px; }
+
+.field-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--text); margin: 8px 0; }
+.field-row select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 13px; }
+.preview-modes { display: flex; gap: 6px; margin: 8px 0; }
+.preview-modes button { flex: 1; padding: 6px 8px; font-size: 12px; border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 8px; cursor: pointer; }
+.preview-modes button.active { border-color: var(--accent); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent-dim); }
+
+</style>
+  <!-- JSZip for "Download All" archive export -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <!-- ─────────────── SIDEBAR ─────────────── -->
+    <aside class="sidebar">
+      <div class="brand">
+        <svg class="brand-logo" viewBox="0 0 64 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="SmartCrop Studio logo">
+          <defs>
+            <linearGradient id="scBody" x1="6" y1="6" x2="58" y2="48" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#62E9FF"/><stop offset="1" stop-color="#00A4E3"/>
+            </linearGradient>
+            <radialGradient id="scLens" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20.5 24.5) rotate(45) scale(17)">
+              <stop stop-color="#9CF3FF"/><stop offset="1" stop-color="#00B6E8"/>
+            </radialGradient>
+          </defs>
+          <path d="M18 12 q0 -6 6 -6 h8 q6 0 6 6" stroke="url(#scBody)" stroke-width="4" stroke-linecap="round"/>
+          <rect x="42" y="8.6" width="11" height="3.4" rx="1.7" fill="url(#scBody)"/>
+          <rect x="5" y="12" width="54" height="34" rx="8" stroke="url(#scBody)" stroke-width="4"/>
+          <circle cx="25" cy="29" r="11.5" fill="url(#scLens)"/>
+          <ellipse cx="20.6" cy="24.4" rx="3.6" ry="2.3" fill="#ffffff" fill-opacity="0.8" transform="rotate(-30 20.6 24.4)"/>
+        </svg>
+        <span class="brand-word"><span class="bw-1">SmartCrop</span><span class="bw-2">STUDIO</span></span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard"><span class="nav-ico">▦</span> Dashboard</button>
+        <button class="nav-item" data-view="queue"><span class="nav-ico">▤</span> Batch Queue</button>
+        <button class="nav-item" data-view="presets"><span class="nav-ico">◇</span> Presets</button>
+        <button class="nav-item" data-view="models"><span class="nav-ico">✦</span> AI Models</button>
+        <button class="nav-item" data-view="exports"><span class="nav-ico">⤓</span> Exports</button>
+        <button class="nav-item" data-view="settings"><span class="nav-ico">⚙</span> Settings</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="engineStatus" class="engine-status loading">
+          <span class="dot"></span><span class="engine-label">Loading AI engine…</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ─────────────── MAIN ─────────────── -->
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Dashboard</h1>
+          <p id="viewSub" class="sub">One-click portrait standardization.</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="resetBtn" class="btn ghost">Reset</button>
+          <button id="generateBtn" class="btn primary" disabled>⚡ Generate</button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section class="view active" id="view-dashboard">
+        <div class="cards">
+          <div class="card stat"><span class="stat-label">Total Images</span><span class="stat-value" id="statTotal">0</span></div>
+          <div class="card stat"><span class="stat-label">Processed</span><span class="stat-value ok" id="statDone">0</span></div>
+          <div class="card stat"><span class="stat-label">Failed</span><span class="stat-value bad" id="statFail">0</span></div>
+          <div class="card stat"><span class="stat-label">Success Rate</span><span class="stat-value accent" id="statRate">—</span></div>
+        </div>
+
+        <div class="card perf-card" id="perfCard">
+          <div class="card-title-row">
+            <h3 class="card-title">Performance</h3>
+            <span class="muted" id="hwInfo">—</span>
+          </div>
+          <div class="perf-grid">
+            <div class="perf-cell"><span class="perf-label">Throughput</span><span class="perf-val" id="perfIps">—</span><span class="perf-unit">img/s</span></div>
+            <div class="perf-cell"><span class="perf-label">Processed</span><span class="perf-val" id="perfDone">0</span></div>
+            <div class="perf-cell"><span class="perf-label">Remaining</span><span class="perf-val" id="perfRem">0</span></div>
+            <div class="perf-cell"><span class="perf-label">Elapsed</span><span class="perf-val" id="perfElapsed">0.0s</span></div>
+            <div class="perf-cell"><span class="perf-label">ETA</span><span class="perf-val" id="perfEta">—</span></div>
+            <div class="perf-cell"><span class="perf-label">Avg quality</span><span class="perf-val" id="perfQ">—</span></div>
+            <div class="perf-cell"><span class="perf-label">JS heap</span><span class="perf-val" id="perfHeap">—</span></div>
+          </div>
+          <div class="bench" id="bench">
+            <span>Decode <b id="bDecode">—</b></span>
+            <span>Detect <b id="bDetect">—</b></span>
+            <span>Compose+Encode <b id="bEncode">—</b></span>
+            <span>Avg/img <b id="bAvg">—</b></span>
+            <span>Workers <b id="bWorkers">—</b></span>
+            <span>Accel <b id="bAccel" class="accel">—</b></span>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <!-- LEFT: input + queue -->
+          <div class="col">
+            <div class="card">
+              <h3 class="card-title">Workspace</h3>
+              <div id="dropzone" class="dropzone">
+                <div class="dz-inner">
+                  <div class="dz-ico">⤒</div>
+                  <p class="dz-title">Drop portraits here</p>
+                  <p class="dz-hint">or click to select files / a folder · unlimited batch</p>
+                </div>
+                <input id="fileInput" type="file" accept="image/*" multiple hidden />
+                <input id="folderInput" type="file" accept="image/*" multiple webkitdirectory hidden />
+              </div>
+              <div class="dz-buttons">
+                <button class="btn ghost sm" id="pickFiles">Select files</button>
+                <button class="btn ghost sm" id="pickFolder">Select folder</button>
+              </div>
+              <button class="btn primary genwide" id="genWorkspace" disabled>⚡ Generate Portraits</button>
+              <p id="pipelineStatus" class="pipeline-status"></p>
+            </div>
+
+            <div class="card">
+              <div class="card-title-row">
+                <h3 class="card-title">Generated Results</h3>
+                <span class="muted" id="queueCount">0 items</span>
+              </div>
+              <div id="queue" class="queue">
+                <p class="empty">Upload photos, then Generate — results appear here.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- MIDDLE: preview -->
+          <div class="col grow">
+            <div class="card preview-card">
+              <div class="card-title-row">
+                <h3 class="card-title">Preview</h3>
+                <div class="seg" id="previewMode">
+                  <button class="seg-btn active" data-mode="slider">Compare</button>
+                  <button class="seg-btn" data-mode="after">After</button>
+                  <button class="seg-btn" data-mode="before">Before</button>
+                </div>
+              </div>
+              <div id="previewStage" class="preview-stage">
+                <p class="empty" id="previewEmpty">Select an item from the queue to preview.</p>
+                <div id="compareWrap" class="compare-wrap hidden">
+                  <img id="imgBefore" class="compare-img" alt="before" />
+                  <div id="afterClip" class="after-clip"><img id="imgAfter" class="compare-img" alt="after" /></div>
+                  <input id="slider" class="compare-slider" type="range" min="0" max="100" value="50" />
+                  <span class="tag tag-before">BEFORE</span>
+                  <span class="tag tag-after">AFTER</span>
+                </div>
+              </div>
+              <div id="previewMeta" class="preview-meta"></div>
+              <div id="previewExport" class="preview-export hidden">
+                <button class="btn primary" id="previewDownload">⬇ Download</button>
+                <span class="muted" id="exportHint"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: properties -->
+          <div class="col">
+            <div class="card">
+              <h3 class="card-title">Properties</h3>
+
+              <label class="field-label">Output Size</label>
+              <div class="preset-list" id="presetPicker"></div>
+
+              <label class="field-label">Background</label>
+              <select id="bgMode" class="select">
+                <option value="original">Keep original</option>
+                <option value="white">Solid white</option>
+                <option value="color">Custom color</option>
+                <option value="custom">Custom image</option>
+                <option value="transparent">Transparent (PNG)</option>
+              </select>
+              <input id="bgColor" type="color" class="color-input hidden" value="#00d1ff" />
+              <input id="customBg" type="file" accept="image/*" class="select hidden" />
+              <p id="bgWarn" class="bg-warn hidden">⚠ Transparent background requires PNG export — format locked to PNG.</p>
+
+              <label class="field-label">Export Format</label>
+              <select id="format" class="select">
+                <option value="image/png">PNG</option>
+                <option value="image/jpeg">JPG</option>
+              </select>
+
+              <label class="field-label">Quality <span id="qualityVal" class="muted">92%</span></label>
+              <input id="quality" class="range" type="range" min="50" max="100" value="92" />
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Export Settings</h3>
+              <label class="toggle"><input type="checkbox" id="opt-preserve" checked /><span>Preserve Original Filenames <em>(no suffixes)</em></span></label>
+              <label class="toggle"><input type="checkbox" id="opt-zip" /><span>Export as ZIP</span></label>
+              <label class="toggle"><input type="checkbox" id="opt-transparent" /><span>Transparent Background <em>(→ PNG)</em></span></label>
+              <div id="zipNameRow">
+                <label class="field-label">ZIP name</label>
+                <input id="zipName" class="select" type="text" value="SmartCrop_Export.zip" />
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Image Enhancement</h3>
+              <label class="toggle"><input type="checkbox" id="ai-colorcorrect" checked /><span>Auto Color Correction <em>(adaptive · only fixes what's off)</em></span></label>
+              <label class="field-row"><span>Auto Color Strength</span>
+                <select id="ai-strength">
+                  <option value="low" selected>Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label class="toggle"><input type="checkbox" id="ai-enhance" /><span>Smart Auto Enhance <em>(quality-gated · identity-safe)</em></span></label>
+              <label class="field-row"><span>Enhance Mode</span>
+                <select id="ai-mode">
+                  <option value="safe">Safe</option>
+                  <option value="balanced" selected>Balanced</option>
+                  <option value="recovery">Recovery</option>
+                </select>
+              </label>
+              <p class="muted" style="font-size:11px;margin-top:6px">Intelligent &amp; non-destructive — good photos are left untouched. Skin tone protected. Quality&gt;85 skips; RealESRGAN / CodeFormer / identity recovery (Recovery mode, &lt;40) run on Clarity (GPU).</p>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">AI Settings</h3>
+              <label class="toggle"><input type="checkbox" id="ai-compose" checked /><span>Smart Composition</span></label>
+              <label class="toggle"><input type="checkbox" id="ai-identity" checked disabled /><span>Preserve Identity <em>(always on)</em></span></label>
+              <label class="toggle"><input type="checkbox" id="ai-level" checked /><span>Eye Leveling</span></label>
+              <label class="toggle"><input type="checkbox" id="ai-edge" checked /><span>Edge Refinement</span></label>
+              <label class="toggle"><input type="checkbox" id="ai-bg" /><span>Background Understanding</span></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BATCH QUEUE (full) -->
+      <section class="view" id="view-queue">
+        <div class="card">
+          <div class="card-title-row">
+            <h3 class="card-title">All Items</h3>
+            <span class="muted" id="queueCount2">0 items</span>
+          </div>
+          <div id="queueFull" class="queue-grid"><p class="empty">Queue is empty.</p></div>
+        </div>
+      </section>
+
+      <!-- PRESETS -->
+      <section class="view" id="view-presets">
+        <div class="cards" id="presetCards"></div>
+      </section>
+
+      <!-- AI MODELS -->
+      <section class="view" id="view-models">
+        <div class="cards" id="modelCards"></div>
+      </section>
+
+      <!-- EXPORTS -->
+      <section class="view" id="view-exports">
+        <div class="card">
+          <h3 class="card-title">Export</h3>
+          <p class="muted">Original filenames are always preserved. Use Export Settings (Properties) to toggle ZIP / transparency.</p>
+          <div class="export-actions">
+            <button class="btn primary" id="exportZip">⤓ Export All</button>
+            <button class="btn ghost" id="exportSheet">▦ Build Team Grid</button>
+            <select id="gridSize" class="select inline">
+              <option value="4x5">4 × 5</option>
+              <option value="5x5">5 × 5</option>
+              <option value="10x10">10 × 10</option>
+            </select>
+          </div>
+          <div id="sheetWrap" class="sheet-wrap hidden">
+            <canvas id="sheetCanvas"></canvas>
+            <button class="btn ghost sm" id="downloadSheet">Download Grid PNG</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="card">
+          <h3 class="card-title">Settings</h3>
+          <p class="muted">SmartCrop Studio runs entirely in your browser — your photos never leave your device.</p>
+          <label class="toggle"><input type="checkbox" id="set-autoselect" checked /><span>Auto-preview newly processed images</span></label>
+          <label class="toggle"><input type="checkbox" id="set-keepfailed" checked /><span>Keep failed items in queue</span></label>
+          <div class="about">
+            <p><strong>Engine:</strong> MediaPipe Face Landmarker (478 pts) + Canvas composition engine</p>
+            <p><strong>Identity safe:</strong> original pixels are never altered, smoothed, or regenerated.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── FOOTER ─────────────── -->
+      <footer class="site-footer">
+        <div class="foot-col foot-left">
+          <svg class="foot-logo" viewBox="0 0 64 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="fScBody" x1="6" y1="6" x2="58" y2="48" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#62E9FF"/><stop offset="1" stop-color="#00A4E3"/>
+              </linearGradient>
+              <radialGradient id="fScLens" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(20.5 24.5) rotate(45) scale(17)">
+                <stop stop-color="#9CF3FF"/><stop offset="1" stop-color="#00B6E8"/>
+              </radialGradient>
+            </defs>
+            <path d="M18 12 q0 -6 6 -6 h8 q6 0 6 6" stroke="url(#fScBody)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="42" y="8.6" width="11" height="3.4" rx="1.7" fill="url(#fScBody)"/>
+            <rect x="5" y="12" width="54" height="34" rx="8" stroke="url(#fScBody)" stroke-width="4"/>
+            <circle cx="25" cy="29" r="11.5" fill="url(#fScLens)"/>
+            <ellipse cx="20.6" cy="24.4" rx="3.6" ry="2.3" fill="#ffffff" fill-opacity="0.8" transform="rotate(-30 20.6 24.4)"/>
+          </svg>
+          <div class="foot-text">
+            <div class="foot-strong">© 2026 SmartCrop Studio</div>
+            <div class="foot-sub">AI Portrait Alignment &amp; Passport Automation Platform</div>
+          </div>
+        </div>
+
+        <div class="foot-col foot-center">
+          <div class="foot-text">
+            <div class="foot-strong">Version 1.0</div>
+            <div class="foot-sub">Built for Designers, Schools, Studios &amp; HR Teams</div>
+          </div>
+        </div>
+
+        <div class="foot-col foot-right">
+          <span class="foot-credit" tabindex="0" data-tip="Founder &amp; Product Architect of SmartCrop Studio">
+            Design &amp; Developed by <span class="foot-name">Satyam</span>
+          </span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- hidden work canvas -->
+  <canvas id="work" hidden></canvas>
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+/* —— inlined @smartcrop/engine —— */
+/* ============================================================================
+ * @smartcrop/engine — framework-agnostic core for SmartCrop Studio
+ *
+ * Extracted (Phase 0 of the V2 plan) from the original app so the exact same,
+ * proven logic can be shared by the current single-file app, a future Next.js
+ * client, and a Node/Python server fallback.
+ *
+ * This module is PURE engine: detection, quality scoring, composition geometry,
+ * the compose+encode worker source, edge-aware matting, and the naming/format
+ * rules. It has no app state and no UI. Model instances (FaceLandmarker /
+ * ImageSegmenter) are passed IN, so the engine never owns the loader.
+ *
+ * Browser APIs used: document/canvas/OffscreenCanvas (client compute). A server
+ * runtime would supply a canvas shim.
+ * ==========================================================================*/
+
+/* ───────────────────────── Composition presets ───────────────────────── */
+const PRESETS = {
+  square:    { id: "square",    name: "1:1 Square",   w: 1080, h: 1080, eyeY: 0.40, faceW: 0.35, note: "ID cards · profiles" },
+  portrait45:{ id: "portrait45",name: "4:5 Portrait", w: 1080, h: 1350, eyeY: 0.38, faceW: 0.32, note: "Banners · posters" },
+  passport:  { id: "passport",  name: "Passport",     w: 413,  h: 531,  eyeY: 0.45, faceW: 0.50, note: "Passport · visa" },
+};
+
+const LM = { leftIris: 468, rightIris: 473, faceLeft: 234, faceRight: 454 };
+
+/* ───────────────────────── Detection + quality ───────────────────────── */
+// landmarker: a MediaPipe FaceLandmarker (or any { detect(source) } shim).
+function detectFace(landmarker, source, W, H) {
+  const result = landmarker.detect(source);
+  if (!result.faceLandmarks || !result.faceLandmarks.length) return null;
+  const lm = result.faceLandmarks[0];
+  const pt = (i) => ({ x: lm[i].x * W, y: lm[i].y * H });
+  const le = pt(LM.leftIris), re = pt(LM.rightIris);
+  const fl = pt(LM.faceLeft),  fr = pt(LM.faceRight);
+  const eyeMid = { x: (le.x + re.x) / 2, y: (le.y + re.y) / 2 };
+  const roll = Math.atan2(re.y - le.y, re.x - le.x);
+  const faceWidth = Math.hypot(fr.x - fl.x, fr.y - fl.y);
+  return { eyeMid, roll, faceWidth };
+}
+
+/* Intelligent quality score (0–100): face size, level, centering, resolution. */
+function scoreQuality(face, W, H) {
+  const sizeRatio = face.faceWidth / W;
+  const sizeScore = sizeRatio < 0.12 ? 30 : sizeRatio > 0.7 ? 65 : 100;
+  const rollDeg = Math.abs(face.roll * 180 / Math.PI);
+  const levelScore = Math.max(0, 100 - rollDeg * 6);
+  const cx = face.eyeMid.x / W, cy = face.eyeMid.y / H;
+  const centerScore = Math.max(0, 100 - (Math.abs(cx - 0.5) * 200 + Math.abs(cy - 0.42) * 120));
+  const resScore = Math.min(W, H) >= 700 ? 100 : Math.min(W, H) >= 400 ? 75 : 45;
+  return Math.round(0.3 * sizeScore + 0.25 * levelScore + 0.2 * centerScore + 0.25 * resScore);
+}
+
+function bgFillFor(opts) {
+  if (opts.bgMode === "white") return "#ffffff";
+  if (opts.bgMode === "color") return opts.bgColor;
+  return null; // original / transparent — never composite a background
+}
+
+/* Composition geometry: the affine transform mapping the eye line to the
+ * preset's target at the target face width. Returns plain numbers so it can be
+ * posted to the compose worker (or used directly server-side). */
+function computeComposeParams(face, preset, { level = true } = {}) {
+  const raw = (preset.faceW * preset.w) / face.faceWidth || 1;
+  const scale = isFinite(raw) && raw > 0 ? raw : 1;
+  return {
+    w: preset.w, h: preset.h,
+    targetX: preset.w / 2, targetY: preset.eyeY * preset.h,
+    eyeX: face.eyeMid.x, eyeY: face.eyeMid.y,
+    angle: level ? face.roll : 0,
+    scale,
+  };
+}
+
+/* ════════════════════════ V3: Batch statistics + normalization ════════════
+ * Two-pass studio normalization: analyze the whole batch, then push every
+ * portrait toward the batch average so 1000 images look captured under one
+ * lighting setup. Corrections are global + clamped (identity/skin preserving).
+ *
+ * - analyzeStats(small)  → per-image {meanR/G/B, meanL, stdL, sharp}
+ * - computeBatchTarget() → the common "SmartCrop Studio Portrait Profile"
+ * - computeCorrection()  → per-image {gain[3], con, mean, sharpen} for the worker
+ * BatchStatisticsEngine + PortraitNormalizationEngine + SmartEnhanceEngine. */
+
+// Caller passes a SMALL bitmap (decode ~128px) so this is cheap for 1000+ imgs.
+function analyzeStats(source) {
+  const w = source.width, h = source.height;
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const cx = c.getContext("2d"); cx.drawImage(source, 0, 0);
+  const d = cx.getImageData(0, 0, w, h).data;
+  const N = w * h, lum = new Float32Array(N);
+  let sr = 0, sg = 0, sb = 0, sl = 0, sll = 0;
+  for (let i = 0, li = 0; i < d.length; i += 4, li++) {
+    const r = d[i], g = d[i + 1], b = d[i + 2], L = 0.299 * r + 0.587 * g + 0.114 * b;
+    sr += r; sg += g; sb += b; sl += L; sll += L * L; lum[li] = L;
+  }
+  const meanL = sl / N;
+  const stdL = Math.sqrt(Math.max(0, sll / N - meanL * meanL));
+  const blur = boxBlur(lum, w, h, 1);               // sharpness = mean |high-pass|
+  let hp = 0; for (let i = 0; i < N; i++) hp += Math.abs(lum[i] - blur[i]);
+  return { meanR: sr / N, meanG: sg / N, meanB: sb / N, meanL, stdL, sharp: hp / N };
+}
+
+function computeBatchTarget(stats) {
+  const n = stats.length || 1;
+  const t = { meanR: 0, meanG: 0, meanB: 0, meanL: 0, stdL: 0, sharp: 0 };
+  for (const s of stats) for (const k in t) t[k] += s[k];
+  for (const k in t) t[k] /= n;
+  return t;
+}
+
+/* Auto Color Correction target: blend the batch average toward a neutral
+ * studio reference (mid luminance + gray-world white balance + studio contrast),
+ * so even a SINGLE image is corrected (dark→brighten, yellow/blue/green→neutral)
+ * while a batch still converges. Gentle blend keeps natural color + identity. */
+// Target = batch average (real consistency), with channels gently neutralized
+// toward luma (gray-world) so colour casts are corrected but neutral images are
+// untouched. NO fixed brightness reference — a portrait's global mean is
+// naturally low (dark hair/clothes/bg), so forcing it to a fixed value wrongly
+// brightens good photos.
+function studioTarget(batch) {
+  const s = 0.25, L = batch.meanL, mix = (a, b) => a + (b - a) * s;  // gentle gray-world
+  return {
+    meanL: L, stdL: batch.stdL, sharp: batch.sharp,
+    meanR: mix(batch.meanR, L), meanG: mix(batch.meanG, L), meanB: mix(batch.meanB, L),
+  };
+}
+
+function computeCorrection(stat, target) {
+  const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+  // Deadzone: deviations within ±dz are treated as "fine" → no change. This is
+  // what keeps already-good images from being altered.
+  const dz = (v, lo, hi) => (v > lo && v < hi ? 1 : v);
+  const sL = stat.meanL > 1 ? stat.meanL : 1, tL = target.meanL > 1 ? target.meanL : 1;
+  const expo = clamp(dz(tL / sL, 0.97, 1.03), 0.82, 1.22);       // exposure (toward batch avg)
+  // white balance = match CHROMATICITY (channel/luma), decoupled from exposure.
+  const wb = (sC, tC) => clamp(dz(((tC > 1 ? tC : 1) / tL) / ((sC > 1 ? sC : 1) / sL), 0.96, 1.04), 0.90, 1.10);
+  const gc = (sC, tC) => clamp(expo * wb(sC, tC), 0.70, 1.25);    // final clamp = identity/skin safety
+  const conRaw = stat.stdL > 1 ? target.stdL / stat.stdL : 1;
+  return {
+    gain: [gc(stat.meanR, target.meanR), gc(stat.meanG, target.meanG), gc(stat.meanB, target.meanB)],
+    con: clamp(dz(conRaw, 0.95, 1.05), 0.90, 1.18),                // contrast match (deadzoned)
+    mean: target.meanL,
+    sharpen: stat.sharp > 0.01 ? clamp(target.sharp / stat.sharp - 1, 0, 0.8) : 0,
+  };
+}
+
+/* ════════════════ V5: Intelligent · adaptive · non-destructive ════════════
+ * Analyze each image (on the FACE/skin region, so dark hair/clothes/bg never
+ * fake a "too dark" reading), then correct ONLY the dimensions that fall outside
+ * the master target range, scaled by a Low/Med/High strength. Good photos →
+ * nothing changes. Skin is protected from saturation shifts.
+ *
+ * Master target ranges (Rule 8): brightness 40–60%, contrast 45–65%, sat 45–65%.
+ */
+const TARGET = { bright: [0.40, 0.60], contrast: [0.45, 0.65], sat: [0.45, 0.65] };
+const STRENGTH = { low: 0.4, medium: 0.7, high: 1.0 };
+
+// region = {x,y,w,h} in source px (the face box). Exposure/contrast/saturation
+// are measured on the face; white balance is measured from the image HIGHLIGHTS
+// (near-whites are the true neutral reference — skin is naturally warm, so it
+// must NOT drive white balance, or every portrait would be de-warmed).
+// Broad YCbCr skin test (ethnicity-agnostic) — used to keep skin OUT of the
+// white-point estimate and to suppress white balance on portraits.
+function _isSkinPx(r, g, b) {
+  const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+  const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 40 && cb >= 77 && cb <= 135 && cr >= 133 && cr <= 175;
+}
+
+function analyzeImage(source, region) {
+  const S = 96, c = document.createElement("canvas"); c.width = S; c.height = S;
+  const cx = c.getContext("2d");
+  const r = region || { x: 0, y: 0, w: source.width, h: source.height };
+  cx.drawImage(source, r.x, r.y, r.w, r.h, 0, 0, S, S);
+  const d = cx.getImageData(0, 0, S, S).data, N = S * S, lum = new Float32Array(N);
+  let sl = 0, sll = 0, ssat = 0, skin = 0;
+  for (let i = 0, li = 0; i < d.length; i += 4, li++) {
+    const R = d[i], G = d[i + 1], B = d[i + 2], L = 0.299 * R + 0.587 * G + 0.114 * B;
+    sl += L; sll += L * L; lum[li] = L;
+    const mx = Math.max(R, G, B), mn = Math.min(R, G, B); ssat += mx > 0 ? (mx - mn) / mx : 0;
+    if (_isSkinPx(R, G, B)) skin++;
+  }
+  const meanL = sl / N, stdL = Math.sqrt(Math.max(0, sll / N - meanL * meanL));
+  const blur = boxBlur(lum, S, S, 1); let hp = 0; for (let i = 0; i < N; i++) hp += Math.abs(lum[i] - blur[i]);
+
+  // White point from FULL-frame near-white highlights, EXCLUDING skin pixels
+  // (warm skin must never bias the neutral reference → prevents cooling/blue).
+  const F = 64, fc = document.createElement("canvas"); fc.width = F; fc.height = F;
+  const fx = fc.getContext("2d"); fx.drawImage(source, 0, 0, F, F);
+  const fd = fx.getImageData(0, 0, F, F).data, NF = F * F, fl = new Float32Array(NF);
+  let hi = 0;
+  for (let i = 0, li = 0; i < fd.length; i += 4, li++) {
+    const L = 0.299 * fd[i] + 0.587 * fd[i + 1] + 0.114 * fd[i + 2]; fl[li] = L; if (L >= 250) hi++;
+  }
+  const thr = [...fl].sort((a, b) => a - b)[Math.floor(NF * 0.88)];   // top ~12% = highlights
+  let wr = 0, wg = 0, wb = 0, wn = 0;
+  for (let i = 0, li = 0; i < fd.length; i += 4, li++) {
+    if (fl[li] >= thr && fl[li] < 252 && !_isSkinPx(fd[i], fd[i + 1], fd[i + 2])) { wr += fd[i]; wg += fd[i + 1]; wb += fd[i + 2]; wn++; }
+  }
+  return {
+    meanL, brightness: meanL / 255, contrast: Math.min(1, stdL / 110), saturation: ssat / N,
+    highlightClip: hi / NF, sharp: hp / N, skinFrac: skin / N,
+    whiteR: wn ? wr / wn : 240, whiteG: wn ? wg / wn : 240, whiteB: wn ? wb / wn : 240,
+  };
+}
+
+// Plan ONLY the needed corrections. Returns null when the image is already good.
+function planCorrection(m, strength = "low") {
+  const S = STRENGTH[strength] ?? STRENGTH.low;
+  const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+  const touched = [];
+
+  // Exposure — only if face is dark, or bright WITH clipping (Rule 4).
+  let expo = 1;
+  if (m.brightness < TARGET.bright[0]) { expo = 1 + (TARGET.bright[0] / m.brightness - 1) * S; touched.push("exposure"); }
+  else if (m.brightness > TARGET.bright[1] && m.highlightClip > 0.02) { expo = 1 + (TARGET.bright[1] / m.brightness - 1) * S; touched.push("exposure"); }
+  expo = clamp(expo, 0.80, 1.30);
+
+  // White balance — neutralize a tint on the HIGHLIGHTS (true neutral ref), not
+  // skin. Heavily suppressed when skin dominates the frame (portrait → natural
+  // warmth is NOT a cast), and capped so it can never COOL the image into blue.
+  const wL = (0.299 * m.whiteR + 0.587 * m.whiteG + 0.114 * m.whiteB) || 1;
+  const g = [wL / Math.max(1, m.whiteR), wL / Math.max(1, m.whiteG), wL / Math.max(1, m.whiteB)];
+  let wb = [1, 1, 1];
+  const skinSupp = 1 - 0.85 * Math.min(1, (m.skinFrac ?? 0) / 0.35);   // portraits → ~0
+  const Swb = S * 0.6 * skinSupp;
+  if (Swb > 0.05 && Math.max(Math.abs(g[0] - 1), Math.abs(g[1] - 1), Math.abs(g[2] - 1)) > 0.10) {
+    wb = g.map((x) => clamp(1 + (x - 1) * Swb, 0.95, 1.07));
+    wb[2] = Math.min(wb[2], 1.03);    // anti-blue: never raise blue (no cold cast)
+    wb[0] = Math.max(wb[0], 0.97);    // never crush red (keep warmth)
+    touched.push("white-balance");
+  }
+
+  // Contrast — adaptive, only outside range (preserve character, Rule 5).
+  let con = 1;
+  if (m.contrast < TARGET.contrast[0]) { con = 1 + (TARGET.contrast[0] / m.contrast - 1) * S; touched.push("contrast"); }
+  else if (m.contrast > TARGET.contrast[1]) { con = 1 + (TARGET.contrast[1] / m.contrast - 1) * S; touched.push("contrast"); }
+  con = clamp(con, 0.85, 1.20);
+
+  // Saturation — only over/under-saturated (Rule 6); never touch normal.
+  let sat = 1;
+  if (m.saturation < TARGET.sat[0]) { sat = 1 + (TARGET.sat[0] / m.saturation - 1) * S; touched.push("saturation"); }
+  else if (m.saturation > TARGET.sat[1]) { sat = 1 + (TARGET.sat[1] / m.saturation - 1) * S; touched.push("saturation"); }
+  sat = clamp(sat, 0.70, 1.30);
+
+  if (!touched.length) return null;                       // Rule 2: good image → skip
+  return { gain: [expo * wb[0], expo * wb[1], expo * wb[2]], con, sat, skinProtect: 0.7, touched };
+}
+
+// Smart Quality Engine score (0–100) from sharpness + resolution → enhance tiers.
+function imageQuality(sharp, minSide) {
+  const sharpScore = Math.max(0, Math.min(100, (sharp / 2.5) * 100));
+  const resScore = minSide >= 1000 ? 100 : minSide >= 700 ? 85 : minSide >= 500 ? 65 : minSide >= 350 ? 50 : 35;
+  return Math.round(0.5 * sharpScore + 0.5 * resScore);
+}
+
+/* Compose+encode worker source (OffscreenCanvas). Consumers post
+ * { ...computeComposeParams(), bitmap, bgFill?, bgBitmap?, norm?, format,
+ * quality, id }. When `norm` is present the SOURCE pixels are normalized
+ * (exposure/white-balance/contrast) and adaptively sharpened before compositing
+ * — RGB only, alpha preserved, background never touched. */
+const WORKER_SRC = `
+function _blurLuma(d, w, h, r) {       // separable box blur of luma → Float32
+  const N = w * h, lum = new Float32Array(N);
+  for (let i = 0, p = 0; i < N; i++, p += 4) lum[i] = 0.299*d[p] + 0.587*d[p+1] + 0.114*d[p+2];
+  const tmp = new Float32Array(N), out = new Float32Array(N), n = 2*r+1;
+  for (let y = 0; y < h; y++) { const row = y*w; let s = 0;
+    for (let k=-r;k<=r;k++) s += lum[row+Math.min(w-1,Math.max(0,k))];
+    for (let x=0;x<w;x++){ tmp[row+x]=s/n; s += lum[row+Math.min(w-1,x+r+1)] - lum[row+Math.max(0,x-r)]; } }
+  for (let x = 0; x < w; x++) { let s = 0;
+    for (let k=-r;k<=r;k++) s += tmp[Math.min(h-1,Math.max(0,k))*w+x];
+    for (let y=0;y<h;y++){ out[y*w+x]=s/n; s += tmp[Math.min(h-1,y+r+1)*w+x] - tmp[Math.max(0,y-r)*w+x]; } }
+  return out;
+}
+function _blurRGB(d, w, h, r) {           // separable box blur of each channel
+  const N = w * h, R = new Float32Array(N), G = new Float32Array(N), B = new Float32Array(N);
+  for (const [off, out] of [[0, R], [1, G], [2, B]]) {
+    const tmp = new Float32Array(N), n = 2 * r + 1;
+    for (let y = 0; y < h; y++) { const row = y * w; let s = 0;
+      for (let k=-r;k<=r;k++) s += d[(row+Math.min(w-1,Math.max(0,k)))*4+off];
+      for (let x=0;x<w;x++){ tmp[row+x]=s/n; s += d[(row+Math.min(w-1,x+r+1))*4+off] - d[(row+Math.max(0,x-r))*4+off]; } }
+    for (let x = 0; x < w; x++) { let s = 0;
+      for (let k=-r;k<=r;k++) s += tmp[Math.min(h-1,Math.max(0,k))*w+x];
+      for (let y=0;y<h;y++){ out[y*w+x]=s/n; s += tmp[Math.min(h-1,y+r+1)*w+x] - tmp[Math.max(0,y-r)*w+x]; } }
+  }
+  return { R, G, B };
+}
+// Soft skin-likelihood (0..1) — protects skin from saturation shifts.
+function _skin(r, g, b) {
+  if (r > 60 && r >= g && g >= b && r - b > 10 && r - b < 145) {
+    return Math.min(1, (r - b) / 60);
+  }
+  return 0;
+}
+// One source pass: edge-aware denoise → color correction → saturation (skin-safe)
+// → adaptive unsharp. RGB only; matte pixels skipped; texture/identity preserved.
+function _processSource(bmp, n) {
+  const w = bmp.width, h = bmp.height;
+  const c = new OffscreenCanvas(w, h), cx = c.getContext("2d");
+  cx.drawImage(bmp, 0, 0);
+  const id = cx.getImageData(0, 0, w, h), d = id.data;
+  const gR=n.gain[0], gG=n.gain[1], gB=n.gain[2], con=n.con, M=n.mean;
+  const amt=n.sharpen||0, den=n.denoise||0, sat=n.sat||1, sp=n.skinProtect||0;
+  const lblur = (amt > 0 || den > 0) ? _blurLuma(d, w, h, 1) : null;
+  const rgb = den > 0 ? _blurRGB(d, w, h, 1) : null;
+  const cl = (v) => (v < 0 ? 0 : v > 255 ? 255 : v);
+  for (let i = 0, li = 0; i < d.length; i += 4, li++) {
+    if (d[i+3] === 0) continue;                          // skip transparent (matte edge)
+    let r = d[i], g = d[i+1], b = d[i+2];
+    const lum = 0.299*r + 0.587*g + 0.114*b, hp = lblur ? lum - lblur[li] : 0;
+    if (den > 0) {                                        // edge-aware denoise: smooth FLAT areas only
+      const wgt = den * (1 - Math.min(1, Math.abs(hp) / 12));
+      r += (rgb.R[li]-r)*wgt; g += (rgb.G[li]-g)*wgt; b += (rgb.B[li]-b)*wgt;
+    }
+    r = r*gR; g = g*gG; b = b*gB;                         // exposure + white balance
+    if (con !== 1) {                                      // contrast on LUMA only (no cast amplify)
+      const L = 0.299*r + 0.587*g + 0.114*b;
+      if (L > 0.5) { const f = ((L - M) * con + M) / L; r *= f; g *= f; b *= f; }
+    }
+    if (sat !== 1) {                                      // saturation, reduced on skin
+      const L = 0.299*r + 0.587*g + 0.114*b;
+      const sf = sp > 0 ? 1 + (sat - 1) * (1 - sp * _skin(r, g, b)) : sat;
+      r = L + (r - L) * sf; g = L + (g - L) * sf; b = L + (b - L) * sf;
+    }
+    if (amt > 0) { r += hp*amt; g += hp*amt; b += hp*amt; }    // mild unsharp (luma high-pass)
+    d[i] = cl(r); d[i+1] = cl(g); d[i+2] = cl(b);
+  }
+  cx.putImageData(id, 0, 0);
+  return c;
+}
+self.onmessage = async (e) => {
+  const m = e.data;
+  const t0 = performance.now();
+  const cv = new OffscreenCanvas(m.w, m.h);
+  const ctx = cv.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  if (m.bgBitmap) {                       // custom background image (cover-fit)
+    const s = Math.max(m.w / m.bgBitmap.width, m.h / m.bgBitmap.height);
+    const bw = m.bgBitmap.width * s, bh = m.bgBitmap.height * s;
+    ctx.drawImage(m.bgBitmap, (m.w - bw) / 2, (m.h - bh) / 2, bw, bh);
+    m.bgBitmap.close();
+  } else if (m.bgFill) { ctx.fillStyle = m.bgFill; ctx.fillRect(0, 0, m.w, m.h); }
+  const src = m.norm ? _processSource(m.bitmap, m.norm) : m.bitmap;  // enhance + color correct
+  ctx.save();
+  ctx.translate(m.targetX, m.targetY);
+  ctx.rotate(-m.angle);
+  ctx.scale(m.scale, m.scale);
+  ctx.translate(-m.eyeX, -m.eyeY);
+  ctx.drawImage(src, 0, 0);
+  ctx.restore();
+  const blob = await cv.convertToBlob(
+    m.format === "image/jpeg" ? { type: "image/jpeg", quality: m.quality } : { type: "image/png" }
+  );
+  m.bitmap.close();
+  self.postMessage({ id: m.id, blob, encodeMs: performance.now() - t0 });
+};`;
+
+/* ════════════════════════ Professional matting pipeline ════════════════════
+ * coarse mask → bilinear upsample → guided filter (luminance guide) →
+ * smoothstep feather → anti-alias → bilinear upsample → straight alpha.
+ * RGB is never altered, so hair/skin/clothing texture is preserved. */
+
+function boxBlur(src, w, h, r) {
+  const n = 2 * r + 1, tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const row = y * w; let sum = 0;
+    for (let k = -r; k <= r; k++) sum += src[row + Math.min(w - 1, Math.max(0, k))];
+    for (let x = 0; x < w; x++) {
+      tmp[row + x] = sum / n;
+      sum += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, x - r)];
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let k = -r; k <= r; k++) sum += tmp[Math.min(h - 1, Math.max(0, k)) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = sum / n;
+      sum += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+
+function guidedFilter(I, p, w, h, r, eps) {
+  const mI = boxBlur(I, w, h, r), mP = boxBlur(p, w, h, r);
+  const N = I.length;
+  const Ip = new Float32Array(N), II = new Float32Array(N);
+  for (let i = 0; i < N; i++) { Ip[i] = I[i] * p[i]; II[i] = I[i] * I[i]; }
+  const mIp = boxBlur(Ip, w, h, r), mII = boxBlur(II, w, h, r);
+  const a = new Float32Array(N), b = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const varI = mII[i] - mI[i] * mI[i];
+    const covIp = mIp[i] - mI[i] * mP[i];
+    a[i] = covIp / (varI + eps);
+    b[i] = mP[i] - a[i] * mI[i];
+  }
+  const mA = boxBlur(a, w, h, r), mB = boxBlur(b, w, h, r);
+  const q = new Float32Array(N);
+  for (let i = 0; i < N; i++) q[i] = Math.min(1, Math.max(0, mA[i] * I[i] + mB[i]));
+  return q;
+}
+
+// Lazily created so this module imports with no DOM (server/SSR/tests safe).
+let _scratch;
+function resamplePlane(src, sw, sh, dw, dh) {
+  _scratch ||= document.createElement("canvas");
+  _scratch.width = sw; _scratch.height = sh;
+  const sc = _scratch.getContext("2d");
+  const sid = sc.createImageData(sw, sh), sd = sid.data;
+  for (let i = 0; i < src.length; i++) { const v = (src[i] * 255) | 0; sd[i * 4] = sd[i * 4 + 1] = sd[i * 4 + 2] = v; sd[i * 4 + 3] = 255; }
+  sc.putImageData(sid, 0, 0);
+  const out = document.createElement("canvas"); out.width = dw; out.height = dh;
+  const oc = out.getContext("2d"); oc.imageSmoothingEnabled = true; oc.imageSmoothingQuality = "high";
+  oc.drawImage(_scratch, 0, 0, dw, dh);
+  const od = oc.getImageData(0, 0, dw, dh).data;
+  const plane = new Float32Array(dw * dh);
+  for (let i = 0; i < plane.length; i++) plane[i] = od[i * 4] / 255;
+  return plane;
+}
+
+function luminancePlane(source, w, h) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const cx = c.getContext("2d"); cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = "high";
+  cx.drawImage(source, 0, 0, w, h);
+  const d = cx.getImageData(0, 0, w, h).data, p = new Float32Array(w * h);
+  for (let i = 0; i < p.length; i++) p[i] = (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) / 255;
+  return p;
+}
+
+function smoothstep(e0, e1, x) { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
+
+// 3×3 morphological min (erosion) on an alpha plane — trims the bg-contaminated
+// edge ring that shows up as white/dark halos, and removes isolated specks.
+function minFilter(p, w, h) {
+  const o = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let mn = 1;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const v = p[Math.min(h - 1, Math.max(0, y + dy)) * w + Math.min(w - 1, Math.max(0, x + dx))];
+      if (v < mn) mn = v;
+    }
+    o[y * w + x] = mn;
+  }
+  return o;
+}
+
+// Estimate a uniform background colour from the four image corners (studio
+// portraits have a clean bg there) — used to decontaminate matte edges.
+function estimateBg(d, W, H) {
+  const s = Math.max(6, Math.round(Math.min(W, H) * 0.03));
+  const patch = (x0, y0) => {
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let y = y0; y < y0 + s; y++) for (let x = x0; x < x0 + s; x++) {
+      const p = (y * W + x) * 4; r += d[p]; g += d[p + 1]; b += d[p + 2]; n++;
+    }
+    return [r / n, g / n, b / n];
+  };
+  const c = [patch(0, 0), patch(W - s, 0), patch(0, H - s), patch(W - s, H - s)];
+  return [0, 1, 2].map((k) => c.reduce((a, v) => a + v[k], 0) / 4);
+}
+
+// segmenter: a MediaPipe ImageSegmenter (or { segment(source) } shim).
+function buildCutout(segmenter, source, W, H) {
+  try {
+    const seg = segmenter.segment(source);
+    const masks = seg.confidenceMasks;
+    if (!masks || !masks.length) { seg.close && seg.close(); return null; }
+    const mask = masks[0], mw = mask.width, mh = mask.height;
+    const conf = Float32Array.from(mask.getAsFloat32Array());
+    seg.close && seg.close();
+
+    const scale = Math.min(1, 768 / Math.max(W, H));
+    const wW = Math.max(16, Math.round(W * scale)), wH = Math.max(16, Math.round(H * scale));
+
+    const p = resamplePlane(conf, mw, mh, wW, wH);
+    const I = luminancePlane(source, wW, wH);
+    const r = Math.max(2, Math.round(Math.min(wW, wH) * 0.012));
+    let q = guidedFilter(I, p, wW, wH, r, 1e-4);
+
+    // Edge cleanup: a higher low-threshold drops the low-confidence, bg-
+    // contaminated fringe (the source of white/grey halos) before it reaches
+    // the alpha; then a full 1px inward erosion pulls the boundary INSIDE the
+    // true edge so no background pixels are kept.
+    for (let i = 0; i < q.length; i++) q[i] = smoothstep(0.32, 0.92, q[i]);
+    q = minFilter(q, wW, wH);                       // morphological erode (anti-halo)
+    // Tight sub-pixel feather (~0.3–0.5px): mostly the hard matte, a little blur.
+    const fb = boxBlur(q, wW, wH, 1);
+    for (let i = 0; i < q.length; i++) q[i] = 0.62 * q[i] + 0.38 * fb[i];
+
+    const A = resamplePlane(q, wW, wH, W, H);
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const cx = c.getContext("2d");
+    cx.drawImage(source, 0, 0, W, H);
+    const id = cx.getImageData(0, 0, W, H), d = id.data;
+
+    // Anti-halo decontamination: estimate the original background colour (image
+    // corners, usually a uniform studio bg) and UNMIX it out of semi-transparent
+    // edge pixels — fg = (observed − (1−α)·bg) / α. This removes the white/grey/
+    // dark fringe that plain feathering leaves behind. Interior pixels untouched.
+    const bg = estimateBg(d, W, H);
+    const cl = (v) => (v < 0 ? 0 : v > 255 ? 255 : v);
+    for (let i = 0; i < A.length; i++) {
+      let a = A[i]; const p = i * 4;
+      if (a > 0.02 && a < 0.985) {
+        const inv = 1 - a;
+        const r = cl((d[p]     - inv * bg[0]) / a);
+        const g = cl((d[p + 1] - inv * bg[1]) / a);
+        const b = cl((d[p + 2] - inv * bg[2]) / a);
+        // Color-spill removal: a semi-transparent edge pixel whose decontaminated
+        // colour is still ~background is pure spill → drop it (no white/colour halo).
+        if (a < 0.6) {
+          const dr = r - bg[0], dg = g - bg[1], db = b - bg[2];
+          if (dr * dr + dg * dg + db * db < 28 * 28) { d[p + 3] = 0; continue; }
+        }
+        d[p] = r; d[p + 1] = g; d[p + 2] = b;
+      }
+      d[p + 3] = (a * 255) | 0;
+    }
+    cx.putImageData(id, 0, 0);
+    return c;
+  } catch (e) { console.warn("matting failed", e); return null; }
+}
+
+/* ───────────────────────── Naming / format rules ─────────────────────────
+ * Hard rule: original filenames are NEVER suffixed. Transparency forces PNG. */
+const Naming = {
+  ext(format) { return format === "image/jpeg" ? "jpg" : "png"; },
+  baseName(name) { return name.replace(/\.[^.]+$/, ""); },
+  preserveOriginalFilename(item) { return item.name; },
+
+  formatForName(name) {
+    if (/\.png$/i.test(name)) return "image/png";
+    if (/\.jpe?g$/i.test(name)) return "image/jpeg";
+    if (/\.webp$/i.test(name)) return "image/webp";
+    return "image/png";
+  },
+
+  formatFor(item, { transparent, preserveNames, globalFormat }) {
+    if (transparent) return "image/png";
+    if (preserveNames) return this.formatForName(item.name);
+    return globalFormat;
+  },
+
+  outputName(item, { transparent, preserveNames, globalFormat }) {
+    if (preserveNames && !transparent) return item.name;
+    if (preserveNames && transparent && /\.png$/i.test(item.name)) return item.name;
+    const e = transparent ? "png" : this.ext(globalFormat);
+    return `${this.baseName(item.name)}.${e}`;
+  },
+
+  validateAlphaChannel(imageData) {
+    const d = imageData.data;
+    for (let i = 3; i < d.length; i += 4) if (d[i] < 250) return true;
+    return false;
+  },
+};
+
+/* —— app shell —— */
+/* ============================================================================
+ * SmartCrop Studio — high-throughput client-side portrait standardization
+ *
+ * Performance architecture (browser-native equivalents of the perf brief):
+ *   - Lazy intake: files are NOT decoded on add (5000 files add instantly).
+ *   - Pipelined engine: serial GPU detection overlaps with a parallel pool of
+ *     Web Workers that compose + encode on OffscreenCanvas (async export).
+ *   - GPU delegate for MediaPipe (WebGL; Apple GPU on Mac) with CPU fallback.
+ *   - createImageBitmap off-thread decode; source bitmaps released immediately.
+ *   - Intelligent quality score gates expensive segmentation.
+ *   - Throttled UI (≤4 fps during batch) + virtualized queue — no O(n²) redraw.
+ *   - Live stats + per-stage benchmark panel.
+ *
+ * Output math is byte-for-byte the same affine transform as before, so image
+ * quality / identity / edge handling are unchanged — only the plumbing is fast.
+ *
+ * Core algorithms (detection, quality, composition geometry, matting, naming)
+ * live in the shared, framework-agnostic @smartcrop/engine module so they can
+ * be reused by the V2 Next.js client / server. This file is the app shell:
+ * state, UI, worker pool, batch orchestration.
+ * ==========================================================================*/
+
+const TASKS_VISION_URL =
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs";
+const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
+const FACE_MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const SEG_MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite";
+
+/* ───────────────────────── State ───────────────────────── */
+const state = {
+  items: [],            // { id, file, name, status, result, meta, score }
+  selectedId: null,
+  preset: "portrait45",
+  faceLandmarker: null,
+  imageSegmenter: null,
+  segReady: false,
+  engineReady: false,
+  accel: "—",           // "GPU" | "CPU"
+  running: false,
+  cancel: false,
+  beforeUrl: null,      // lazily-created object URL for the previewed source
+  customBgFile: null,   // uploaded background image (bgMode = "custom")
+};
+
+const SETTINGS_KEY = "smartcrop.settings.v1";
+
+let nextId = 1;
+const WORKER_COUNT = Math.max(2, Math.min((navigator.hardwareConcurrency || 4), 8));
+const SMALL_BATCH = 60;       // show source thumbnails only below this size
+const QUEUE_RENDER_CAP = 150; // virtualization cap
+
+/* ───────────────────────── DOM helpers ───────────────────────── */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+function toast(msg, ms = 2600) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), ms);
+}
+
+/* ════════════════════════ Encode worker pool ════════════════════════
+ * Each worker composes the affine transform on an OffscreenCanvas and encodes
+ * to a Blob — entirely off the main thread, in parallel across cores.
+ * Worker source (WORKER_SRC) is provided by @smartcrop/engine. */
+class EncodePool {
+  constructor(n) {
+    this.url = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" }));
+    this.workers = [];
+    this.free = [];
+    this.waiters = [];
+    this.jobs = new Map();
+    this.jid = 0;
+    for (let i = 0; i < n; i++) {
+      const w = new Worker(this.url);
+      w.onmessage = (e) => {
+        const job = this.jobs.get(e.data.id);
+        this.jobs.delete(e.data.id);
+        this._release(w);
+        job.resolve(e.data);
+      };
+      this.workers.push(w);
+      this.free.push(w);
+    }
+  }
+  _acquire() {
+    return this.free.length ? Promise.resolve(this.free.pop())
+                            : new Promise((r) => this.waiters.push(r));
+  }
+  _release(w) {
+    const next = this.waiters.shift();
+    if (next) next(w); else this.free.push(w);
+  }
+  async run(params, transfer) {
+    const w = await this._acquire();
+    const id = ++this.jid;
+    return new Promise((resolve) => {
+      this.jobs.set(id, { resolve });
+      w.postMessage({ ...params, id }, transfer);
+    });
+  }
+  terminate() {
+    this.workers.forEach((w) => w.terminate());
+    URL.revokeObjectURL(this.url);
+  }
+}
+
+/* ───────────────────────── Engine bootstrap ───────────────────────── */
+async function initEngine() {
+  const statusEl = $("#engineStatus");
+  $("#hwInfo").textContent = `${WORKER_COUNT} workers · ${navigator.hardwareConcurrency || "?"} cores`;
+  $("#bWorkers").textContent = WORKER_COUNT;
+  try {
+    const { FaceLandmarker, ImageSegmenter, FilesetResolver } = await import(
+      /* @vite-ignore */ TASKS_VISION_URL
+    );
+    const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+
+    // Try GPU delegate first; fall back to CPU if it fails to initialize.
+    const mkFace = (delegate) => FaceLandmarker.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: FACE_MODEL_URL, delegate },
+      runningMode: "IMAGE",
+      numFaces: 1,
+    });
+    try {
+      state.faceLandmarker = await mkFace("GPU");
+      state.accel = "GPU";
+    } catch {
+      state.faceLandmarker = await mkFace("CPU");
+      state.accel = "CPU";
+    }
+
+    state.engineReady = true;
+    statusEl.className = "engine-status ready";
+    statusEl.querySelector(".engine-label").textContent = `AI engine ready · ${state.accel}`;
+    $("#bAccel").textContent = state.accel;
+    setGenEnabled(state.items.length > 0);
+
+    // Optional segmentation (lazy, non-fatal).
+    ImageSegmenter.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: SEG_MODEL_URL, delegate: state.accel },
+      runningMode: "IMAGE",
+      outputCategoryMask: false,
+      outputConfidenceMasks: true,
+    })
+      .then((seg) => { state.imageSegmenter = seg; state.segReady = true; renderModelCards(); })
+      .catch(() => { state.segReady = false; });
+  } catch (err) {
+    console.error(err);
+    statusEl.className = "engine-status error";
+    statusEl.querySelector(".engine-label").textContent = "Engine offline (no network)";
+    $("#bAccel").textContent = "offline";
+    toast("Could not load the AI engine. Check your internet connection.");
+  }
+}
+
+/* Both Generate buttons (top bar + input panel) act as one control. */
+function genButtons() { return [$("#generateBtn"), $("#genWorkspace")].filter(Boolean); }
+function setGenEnabled(en) { genButtons().forEach((b) => (b.disabled = !en)); }
+function setGenRunning(running) {
+  genButtons().forEach((b) => {
+    b.textContent = running ? "■ Stop" : (b.id === "genWorkspace" ? "⚡ Generate Portraits" : "⚡ Generate");
+  });
+}
+
+/* ───────────────────────── File intake (lazy) ───────────────────────── */
+function addFiles(fileList) {
+  const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+  if (!files.length) return;
+  for (const file of files) {
+    const item = { id: nextId++, file, name: file.name, status: "pending", result: null, meta: null, score: null };
+    if (state.items.length < SMALL_BATCH) item.thumbUrl = URL.createObjectURL(file); // cheap UX for small sets
+    state.items.push(item);
+  }
+  renderQueue();
+  renderStats();
+  if (state.engineReady) setGenEnabled(state.items.length > 0);
+  if (!state.selectedId && state.items.length) selectItem(state.items[0].id);
+  toast(`${files.length} image${files.length > 1 ? "s" : ""} added · ${state.items.length} queued.`);
+}
+
+/* detectFace / scoreQuality / bgFillFor are provided by @smartcrop/engine. */
+
+/* Keep background / format / transparency UI consistent.
+ * Transparent background ⇒ force PNG export and surface a warning. */
+function applyBgRules() {
+  const mode = $("#bgMode").value;
+  const transparent = mode === "transparent";
+  $("#bgColor").classList.toggle("hidden", mode !== "color");
+  $("#customBg").classList.toggle("hidden", mode !== "custom");
+  const t = $("#opt-transparent"); if (t) t.checked = transparent;
+  const fmt = $("#format");
+  if (transparent) { fmt.value = "image/png"; fmt.disabled = true; $("#bgWarn").classList.remove("hidden"); }
+  else { fmt.disabled = false; $("#bgWarn").classList.add("hidden"); }
+  if (mode !== "original" && !state.segReady) toast("Background AI still loading…");
+}
+
+/* Persist properties so a returning user keeps their setup. */
+function persistSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      preset: state.preset, bgMode: $("#bgMode").value, bgColor: $("#bgColor").value,
+      format: $("#format").value, quality: $("#quality").value,
+      preserve: $("#opt-preserve").checked, zip: $("#opt-zip").checked,
+      level: $("#ai-level").checked,
+      enhance: $("#ai-enhance").checked, colorCorrect: $("#ai-colorcorrect").checked,
+      strength: $("#ai-strength")?.value, mode: $("#ai-mode")?.value,
+    }));
+  } catch {}
+}
+function loadSettings() {
+  let s; try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"); } catch {}
+  if (!s) return;
+  if (s.preset && PRESETS[s.preset]) state.preset = s.preset;
+  if (s.bgMode) $("#bgMode").value = s.bgMode;
+  if (s.bgColor) $("#bgColor").value = s.bgColor;
+  if (s.format) $("#format").value = s.format;
+  if (s.quality) { $("#quality").value = s.quality; $("#qualityVal").textContent = s.quality + "%"; }
+  if (typeof s.preserve === "boolean") $("#opt-preserve").checked = s.preserve;
+  if (typeof s.zip === "boolean") $("#opt-zip").checked = s.zip;
+  if (typeof s.level === "boolean") $("#ai-level").checked = s.level;
+  if (typeof s.enhance === "boolean") $("#ai-enhance").checked = s.enhance;
+  if (typeof s.colorCorrect === "boolean") $("#ai-colorcorrect").checked = s.colorCorrect;
+  if (s.strength && $("#ai-strength")) $("#ai-strength").value = s.strength;
+  if (s.mode && $("#ai-mode")) $("#ai-mode").value = s.mode;
+}
+
+/* The edge-aware matting pipeline (boxBlur / guidedFilter / buildCutout) lives
+ * in @smartcrop/engine; it's invoked below only when a background is replaced. */
+
+/* ───────────────────────── Options ───────────────────────── */
+function currentOpts() {
+  return {
+    level: $("#ai-level").checked && $("#ai-compose").checked,
+    bgMode: $("#bgMode").value,
+    bgColor: $("#bgColor").value,
+    format: $("#format").value,
+    quality: parseInt($("#quality").value, 10) / 100,
+  };
+}
+
+/* ════════════════════════ Batch engine ════════════════════════
+ * Pipeline: decode → detect (serial, GPU) → [segment if needed] → dispatch to
+ * worker pool for compose+encode. Detection of image N+1 overlaps encoding of
+ * image N, so cores stay busy and the main thread never blocks on encode.   */
+const bench = { decode: 0, detect: 0, encode: 0, n: 0, qSum: 0, qN: 0 };
+
+async function generateAll() {
+  if (!state.engineReady) { toast("AI engine not ready yet."); return; }
+  if (state.running) { state.cancel = true; return; }
+  const preset = PRESETS[state.preset];
+  const opts = currentOpts();
+  const needSeg = opts.bgMode !== "original" && state.segReady; // cutout for any non-original bg
+  const transparent = opts.bgMode === "transparent";
+  const preserveNames = $("#opt-preserve").checked;
+  if (transparent && !state.segReady) toast("Transparent mode: background AI not loaded — only inputs that already have transparency will stay transparent.");
+  const targets = state.items.filter((i) => i.status !== "done");
+  if (!targets.length) { toast("Nothing to process."); return; }
+
+  bench.decode = bench.detect = bench.encode = bench.n = bench.qSum = bench.qN = 0;
+  state.running = true; state.cancel = false;
+  setGenRunning(true);
+
+  // ── V5 intelligent enhancement (per-image, analyze→correct only if needed) ──
+  const colorCorrect = $("#ai-colorcorrect")?.checked;
+  const enhance = $("#ai-enhance")?.checked;
+  const strength = $("#ai-strength")?.value || "low";
+  // live "active modules" status
+  const modules = ["Face Detection"];
+  if (enhance) modules.push("Smart Enhance");
+  if (colorCorrect) modules.push("Auto Color Correction");
+  if (needSeg) modules.push("Background Removal");
+  modules.push("Export");
+  const ps = $("#pipelineStatus"); if (ps) ps.textContent = "Active: " + modules.join(" · ");
+
+  const pool = new EncodePool(WORKER_COUNT);
+  const t0 = performance.now();
+  let done = 0, processed = 0;
+  startStatsTicker(targets.length, t0, () => done);
+
+  const inflight = [];
+  for (const item of targets) {
+    if (state.cancel) break;
+    item.status = "processing";
+    let bitmap;
+    try {
+      const d0 = performance.now();
+      bitmap = await createImageBitmap(item.file);   // off-thread decode
+      bench.decode += performance.now() - d0;
+    } catch {
+      item.status = "failed"; item.meta = { error: "Decode failed" }; done++; continue;
+    }
+    const W = bitmap.width, H = bitmap.height;
+
+    const f0 = performance.now();
+    const face = detectFace(state.faceLandmarker, bitmap, W, H);
+    bench.detect += performance.now() - f0;
+
+    if (!face) {
+      item.status = "failed"; item.meta = { error: "No face detected" };
+      bitmap.close(); done++; continue;
+    }
+    const score = scoreQuality(face, W, H);
+    item.score = score; bench.qSum += score; bench.qN++;
+
+    // V5: analyze the FACE/skin region (not the whole frame) so dark hair/clothes
+    // never fake a "too dark" reading. Done before segmentation (bitmap alive).
+    let metrics = null;
+    if (colorCorrect || enhance) {
+      const fw = face.faceWidth || W * 0.3;
+      const rx = Math.max(0, face.eyeMid.x - 0.5 * fw), ry = Math.max(0, face.eyeMid.y - 0.25 * fw);
+      metrics = analyzeImage(bitmap, { x: rx, y: ry, w: Math.min(fw, W - rx), h: Math.min(fw * 1.3, H - ry) });
+    }
+
+    // Conditional segmentation: skip entirely unless bg replacement is requested.
+    let drawBitmap = bitmap;
+    if (needSeg) {
+      const cut = buildCutout(state.imageSegmenter, bitmap, W, H);
+      if (cut) {
+        drawBitmap = await createImageBitmap(cut);
+        bitmap.close();
+      }
+    }
+
+    const geom = computeComposeParams(face, preset, { level: opts.level });
+    const outFormat = Naming.formatFor(item, { transparent, preserveNames, globalFormat: opts.format });
+    item.outName = Naming.outputName(item, { transparent, preserveNames, globalFormat: opts.format });
+    const transfer = [drawBitmap];
+    let bgBitmap = null;
+    if (opts.bgMode === "custom" && state.customBgFile) {
+      try { bgBitmap = await createImageBitmap(state.customBgFile); transfer.push(bgBitmap); } catch {}
+    }
+    // V5: correct ONLY what's out of range; good photos → norm stays null (no-op).
+    let norm = null;
+    if (metrics) {
+      const plan = colorCorrect ? planCorrection(metrics, strength) : null;
+      let denoise = 0, sharpen = 0;
+      if (enhance) {
+        // Smart Auto Enhance — Smart Quality Engine: >85 skip · 60–85 light · <60 full.
+        // RealESRGAN/CodeFormer + identity recovery (<40, Recovery mode) = Clarity GPU.
+        const q = imageQuality(metrics.sharp, Math.min(W, H));
+        item.quality = q;
+        const scale = { safe: 0.6, balanced: 1, recovery: 1 }[$("#ai-mode")?.value || "balanced"];
+        if (q <= 85) {
+          if (q >= 60) { denoise = 0.12 * scale; sharpen = 0.22 * scale; }
+          else { denoise = 0.32 * scale; sharpen = 0.42 * scale; }
+        }
+      }
+      if (plan || denoise || sharpen) {
+        const gain = plan ? plan.gain : [1, 1, 1];
+        const pivot = metrics.meanL * (0.299 * gain[0] + 0.587 * gain[1] + 0.114 * gain[2]);
+        norm = {
+          gain, con: plan ? plan.con : 1, sat: plan ? plan.sat : 1,
+          skinProtect: plan ? plan.skinProtect : 0, mean: pivot, sharpen, denoise,
+        };
+        item.corrections = plan ? plan.touched : [];
+      }
+    }
+    const params = {
+      ...geom, bitmap: drawBitmap, bgBitmap, norm,
+      // transparent/original → no fill (preserve alpha); never composite a bg.
+      bgFill: transparent ? null : bgFillFor(opts), format: outFormat, quality: opts.quality,
+    };
+    const meta = {
+      out: `${preset.w}×${preset.h}`, eyeLine: `${Math.round(preset.eyeY * 100)}%`,
+      rollDeg: (face.roll * 180 / Math.PI).toFixed(1), scale: params.scale.toFixed(2), score,
+      corrections: (colorCorrect || enhance)
+        ? (norm ? [...(item.corrections || []), ...(norm.denoise || norm.sharpen ? ["enhance"] : [])].join(", ") : "none — already good")
+        : null,
+      quality: item.quality,
+    };
+
+    // Dispatch to pool; do NOT await — let detection of the next image proceed.
+    const p = pool.run(params, transfer).then(({ blob, encodeMs }) => {
+      bench.encode += encodeMs; bench.n++;
+      if (item.result) URL.revokeObjectURL(item.result);
+      item.result = URL.createObjectURL(blob);
+      item.meta = meta; item.status = "done"; done++;
+    });
+    inflight.push(p);
+    processed++;
+  }
+
+  await Promise.all(inflight);
+  pool.terminate();
+  stopStatsTicker();
+  state.running = false;
+  setGenRunning(false);
+  { const ps = $("#pipelineStatus"); if (ps) ps.textContent = ""; }
+
+  flushStats(targets.length, t0, done, true);
+  renderQueue();
+  if ($("#set-autoselect")?.checked) {
+    const fd = state.items.find((i) => i.status === "done");
+    if (fd) selectItem(fd.id);
+  } else renderPreview();
+  updateExportBar();
+
+  const total = (performance.now() - t0) / 1000;
+  const ok = state.items.filter((i) => i.status === "done").length;
+  const fail = state.items.filter((i) => i.status === "failed").length;
+  toast(`${state.cancel ? "Stopped" : "Done"} — ${ok} ok${fail ? `, ${fail} failed` : ""} · ${total.toFixed(1)}s · ${(done / total).toFixed(1)} img/s`);
+}
+
+/* ───────────────────────── Live stats ticker (throttled) ───────────────────────── */
+let statsTimer = null;
+function fmtTime(s) { return s < 60 ? `${s.toFixed(1)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`; }
+
+function startStatsTicker(total, t0, getDone) {
+  flushStats(total, t0, getDone(), false);
+  statsTimer = setInterval(() => flushStats(total, t0, getDone(), false), 250);
+}
+function stopStatsTicker() { clearInterval(statsTimer); statsTimer = null; }
+
+function flushStats(total, t0, done, final) {
+  const elapsed = (performance.now() - t0) / 1000;
+  const ips = elapsed > 0 ? done / elapsed : 0;
+  const remaining = total - done;
+  $("#perfIps").textContent = ips ? ips.toFixed(1) : "—";
+  $("#perfDone").textContent = done;
+  $("#perfRem").textContent = remaining;
+  $("#perfElapsed").textContent = fmtTime(elapsed);
+  $("#perfEta").textContent = ips > 0 && remaining > 0 ? fmtTime(remaining / ips) : (final ? "0s" : "—");
+  $("#perfQ").textContent = bench.qN ? Math.round(bench.qSum / bench.qN) : "—";
+  if (performance.memory) $("#perfHeap").textContent = `${(performance.memory.usedJSHeapSize / 1048576) | 0} MB`;
+  $("#bDecode").textContent = bench.n || done ? `${(bench.decode / Math.max(1, done)).toFixed(1)} ms` : "—";
+  $("#bDetect").textContent = done ? `${(bench.detect / Math.max(1, done)).toFixed(1)} ms` : "—";
+  $("#bEncode").textContent = bench.n ? `${(bench.encode / bench.n).toFixed(1)} ms` : "—";
+  $("#bAvg").textContent = done && elapsed ? `${(elapsed * 1000 / done).toFixed(1)} ms` : "—";
+  // throttled queue + dashboard counts
+  renderStats();
+  renderQueueStatusesOnly();
+}
+
+/* ───────────────────────── Rendering: stats / queue ───────────────────────── */
+function renderStats() {
+  const total = state.items.length;
+  const done = state.items.filter((i) => i.status === "done").length;
+  const fail = state.items.filter((i) => i.status === "failed").length;
+  $("#statTotal").textContent = total;
+  $("#statDone").textContent = done;
+  $("#statFail").textContent = fail;
+  const fin = done + fail;
+  $("#statRate").textContent = fin ? `${Math.round((done / fin) * 100)}%` : "—";
+}
+
+function statusLabel(s) {
+  return { pending: "Pending", processing: "Processing…", done: "Ready", failed: "Failed" }[s] || s;
+}
+
+function queueItemEl(item, small) {
+  const el = document.createElement("div");
+  el.className = "q-item" + (item.id === state.selectedId ? " sel" : "");
+  el.dataset.id = item.id;
+  el.onclick = () => selectItem(item.id);
+  const thumb = item.result || item.thumbUrl;
+  const thumbHtml = small
+    ? `<img class="q-thumb" src="${thumb || ""}" alt="" />`
+    : `<span class="q-badge ${item.status} q-dot"></span>`;
+  el.innerHTML = `
+    ${thumbHtml}
+    <div class="q-info">
+      <div class="q-name" title="${item.name}">${item.name}</div>
+      <div class="q-status ${item.status}">${statusLabel(item.status)}${item.score != null ? ` · Q${item.score}` : ""}</div>
+    </div>
+    <span class="q-badge ${item.status}"></span>`;
+  return el;
+}
+
+function renderQueue() {
+  const q = $("#queue"), qf = $("#queueFull");
+  const n = state.items.length;
+  const small = n <= SMALL_BATCH;
+  $("#queueCount").textContent = `${n} item${n !== 1 ? "s" : ""}`;
+  $("#queueCount2").textContent = $("#queueCount").textContent;
+  if (!n) {
+    q.innerHTML = `<p class="empty">Queue is empty.</p>`;
+    qf.innerHTML = `<p class="empty">Queue is empty.</p>`;
+    return;
+  }
+  const shown = state.items.slice(0, QUEUE_RENDER_CAP);
+  q.innerHTML = ""; qf.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const item of shown) frag.appendChild(queueItemEl(item, small));
+  q.appendChild(frag);
+  if (n > QUEUE_RENDER_CAP) {
+    const more = document.createElement("p");
+    more.className = "empty";
+    more.textContent = `+ ${n - QUEUE_RENDER_CAP} more (virtualized)`;
+    q.appendChild(more);
+  }
+  // full grid is built lazily only when its view is opened
+  qf.dataset.dirty = "1";
+}
+
+/* In-place status refresh for the visible queue rows (cheap; no full rebuild). */
+function renderQueueStatusesOnly() {
+  const rows = $("#queue").children;
+  for (const row of rows) {
+    const id = +row.dataset.id;
+    if (!id) continue;
+    const item = state.items.find((i) => i.id === id);
+    if (!item) continue;
+    const st = row.querySelector(".q-status");
+    if (st) {
+      st.className = `q-status ${item.status}`;
+      st.textContent = statusLabel(item.status) + (item.score != null ? ` · Q${item.score}` : "");
+    }
+    row.querySelectorAll(".q-badge").forEach((b) => (b.className = b.classList.contains("q-dot") ? `q-badge ${item.status} q-dot` : `q-badge ${item.status}`));
+  }
+}
+
+function renderQueueFull() {
+  const qf = $("#queueFull");
+  if (qf.dataset.dirty !== "1" && qf.children.length) return;
+  const small = state.items.length <= SMALL_BATCH;
+  qf.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const item of state.items.slice(0, 500)) frag.appendChild(queueItemEl(item, small));
+  qf.appendChild(frag);
+  qf.dataset.dirty = "0";
+}
+
+/* ───────────────────────── Preview ───────────────────────── */
+function selectItem(id) {
+  state.selectedId = id;
+  // highlight only
+  $$("#queue .q-item").forEach((el) => el.classList.toggle("sel", +el.dataset.id === id));
+  renderPreview();
+  updateExportBar();
+}
+
+async function renderPreview() {
+  const item = state.items.find((i) => i.id === state.selectedId);
+  const empty = $("#previewEmpty"), wrap = $("#compareWrap"), meta = $("#previewMeta");
+  if (!item) { empty.classList.remove("hidden"); wrap.classList.add("hidden"); meta.innerHTML = ""; return; }
+  empty.classList.add("hidden");
+  wrap.classList.remove("hidden");
+
+  // lazily (re)build the before-image URL
+  if (state.beforeUrl) { URL.revokeObjectURL(state.beforeUrl); state.beforeUrl = null; }
+  state.beforeUrl = item.thumbUrl || URL.createObjectURL(item.file);
+  $("#imgBefore").src = state.beforeUrl;
+  $("#imgAfter").src = item.result || state.beforeUrl;
+
+  const before = $("#imgBefore"), after = $("#imgAfter");
+  const sync = () => { after.style.width = before.clientWidth + "px"; after.style.height = before.clientHeight + "px"; };
+  before.onload = sync; if (before.complete) sync();
+
+  if (item.meta && !item.meta.error) {
+    meta.innerHTML = `
+      <span>Output <b>${item.meta.out}</b></span>
+      <span>Eye line <b>${item.meta.eyeLine}</b></span>
+      <span>Roll <b>${item.meta.rollDeg}°</b></span>
+      <span>Scale <b>${item.meta.scale}×</b></span>
+      <span>Quality <b>${item.meta.score}</b></span>
+      ${item.meta.corrections != null ? `<span>Auto color <b>${item.meta.corrections}</b></span>` : ""}`;
+  } else if (item.meta && item.meta.error) {
+    meta.innerHTML = `<span style="color:var(--bad)">⚠ ${item.meta.error}</span>`;
+  } else {
+    meta.innerHTML = `<span class="muted">Not processed yet — click Generate.</span>`;
+  }
+}
+
+function setSplit(v) { $("#afterClip").style.width = v + "%"; $("#compareWrap").style.setProperty("--split", v + "%"); }
+function setPreviewMode(mode) {
+  const clip = $("#afterClip"), slider = $("#slider"), wrap = $("#compareWrap");
+  if (mode === "slider") { setSplit(slider.value); slider.style.display = ""; }
+  else if (mode === "after") { clip.style.width = "100%"; wrap.style.setProperty("--split", "100%"); slider.style.display = "none"; }
+  else { clip.style.width = "0%"; wrap.style.setProperty("--split", "0%"); slider.style.display = "none"; }
+}
+
+/* ───────────────────────── Preset & model cards ───────────────────────── */
+function renderPresetPicker() {
+  const host = $("#presetPicker"); host.innerHTML = "";
+  for (const p of Object.values(PRESETS)) {
+    const el = document.createElement("div");
+    el.className = "preset-opt" + (p.id === state.preset ? " sel" : "");
+    el.innerHTML = `<span>${p.name}</span><span class="dim">${p.w}×${p.h}</span>`;
+    el.onclick = () => { state.preset = p.id; renderPresetPicker(); persistSettings(); };
+    host.appendChild(el);
+  }
+}
+function renderPresetCards() {
+  const host = $("#presetCards"); host.className = "cards three"; host.innerHTML = "";
+  for (const p of Object.values(PRESETS)) {
+    const el = document.createElement("div"); el.className = "card info-card";
+    el.innerHTML = `<h4>${p.name}</h4><p style="margin-bottom:10px">${p.w} × ${p.h}px · ${p.note}</p>
+      <span class="pill">Eye line ${Math.round(p.eyeY*100)}%</span><span class="pill">Face width ${Math.round(p.faceW*100)}%</span>`;
+    host.appendChild(el);
+  }
+}
+function renderModelCards() {
+  const models = [
+    { n: "Face Landmarker", d: `MediaPipe 478-pt + iris. ${state.accel} delegate. Drives alignment.`, s: "live" },
+    { n: "Composition Engine", d: "Affine engine in Web Workers (OffscreenCanvas). Parallel compose+encode.", s: "live" },
+    { n: "Selfie Segmentation", d: "Conditional cutout — runs only when a background is replaced.", s: state.segReady ? "live" : "soon" },
+    { n: "Quality Checker", d: "Per-image 0–100 score gating expensive stages.", s: "live" },
+    { n: "Shoulder Detection", d: "Pose-based body framing.", s: "soon" },
+    { n: "AI Completion", d: "Firefly / SD inpainting for missing body.", s: "soon" },
+  ];
+  const host = $("#modelCards"); host.className = "cards three"; host.innerHTML = "";
+  for (const m of models) {
+    const el = document.createElement("div"); el.className = "card info-card";
+    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h4 style="margin:0">${m.n}</h4><span class="status-pill ${m.s}">${m.s === "live" ? "LIVE" : "SOON"}</span></div><p>${m.d}</p>`;
+    host.appendChild(el);
+  }
+}
+
+/* ════════════════════════ Export (app layer) ════════════════════════
+ * Naming/format rules come from engine Naming (single source of truth: original
+ * filenames are never suffixed). This layer only does DOM/JSZip plumbing. */
+async function exportZipPackage(items, archiveName) {
+  if (typeof JSZip === "undefined") { toast("ZIP library still loading — try again."); return; }
+  const zip = new JSZip();
+  const used = new Map();
+  for (const item of items) {
+    let name = item.outName || Naming.preserveOriginalFilename(item); // original, no suffix
+    if (used.has(name)) { const n = used.get(name) + 1; used.set(name, n); name = `${Naming.baseName(name)} (${n}).${name.split(".").pop()}`; }
+    else used.set(name, 1);
+    zip.file(name, await (await fetch(item.result)).blob());
+  }
+  downloadBlob(await zip.generateAsync({ type: "blob" }), archiveName || "SmartCrop_Export.zip");
+}
+
+async function exportAll() {
+  const done = state.items.filter((i) => i.status === "done" && i.result);
+  if (!done.length) { toast("Nothing processed to export yet."); return; }
+  const forceZip = $("#opt-zip").checked;
+
+  // Count-based rule: exactly one image → download that image directly (no ZIP).
+  if (done.length === 1 && !forceZip) {
+    const it = done[0];
+    downloadDataUrl(it.result, it.outName || it.name);
+    toast(`Downloaded ${it.outName || it.name}.`);
+    return;
+  }
+
+  // More than one (or ZIP forced) → single archive, original names inside.
+  const archive = ($("#zipName").value || "SmartCrop_Export").replace(/\.zip$/i, "") + ".zip";
+  await exportZipPackage(done, archive);
+  toast(`Exported ${done.length} portraits → ${archive} (original names preserved).`);
+}
+
+// Reflect current state on the under-preview export bar (Issue 4 / 2).
+function updateExportBar() {
+  const bar = $("#previewExport"), btn = $("#previewDownload"), hint = $("#exportHint");
+  if (!bar) return;
+  const done = state.items.filter((i) => i.status === "done" && i.result);
+  if (!done.length) { bar.classList.add("hidden"); return; }
+  bar.classList.remove("hidden");
+  const single = done.length === 1 && !$("#opt-zip").checked;
+  btn.textContent = single ? "⬇ Download Image" : `⬇ Download ZIP (${done.length})`;
+  hint.textContent = single ? (done[0].outName || done[0].name) : "original filenames preserved";
+}
+
+function buildSheet() {
+  const done = state.items.filter((i) => i.status === "done" && i.result);
+  if (!done.length) { toast("Process some portraits first."); return; }
+  const [cols, rows] = $("#gridSize").value.split("x").map(Number);
+  const cell = 240, pad = 16, canvas = $("#sheetCanvas");
+  canvas.width = cols * cell + pad * (cols + 1);
+  canvas.height = rows * cell + pad * (rows + 1);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#0B1020"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const slots = Math.min(done.length, cols * rows);
+  let loaded = 0;
+  for (let k = 0; k < slots; k++) {
+    const r = Math.floor(k / cols), c = k % cols;
+    const x = pad + c * (cell + pad), y = pad + r * (cell + pad);
+    const im = new Image();
+    im.onload = () => {
+      const ar = im.width / im.height; let w = cell, h = cell;
+      if (ar > 1) h = cell / ar; else w = cell * ar;
+      ctx.drawImage(im, x + (cell - w) / 2, y + (cell - h) / 2, w, h);
+      if (++loaded === slots) $("#sheetWrap").classList.remove("hidden");
+    };
+    im.src = done[k].result;
+  }
+  $("#sheetWrap").classList.remove("hidden");
+  toast(`Built ${cols}×${rows} grid (${slots}).`);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function downloadDataUrl(dataUrl, filename) {
+  const a = document.createElement("a"); a.href = dataUrl; a.download = filename; a.click();
+}
+
+/* ───────────────────────── View switching ───────────────────────── */
+const VIEW_META = {
+  dashboard: ["Dashboard", "High-throughput portrait standardization."],
+  queue: ["Batch Queue", "All images in this batch."],
+  presets: ["Presets", "Composition rules per output type."],
+  models: ["AI Models", "The processing pipeline."],
+  exports: ["Exports", "Download portraits and team grids."],
+  settings: ["Settings", "Engine & privacy."],
+};
+function switchView(view) {
+  $$(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+  const [title, sub] = VIEW_META[view];
+  $("#viewTitle").textContent = title; $("#viewSub").textContent = sub;
+  if (view === "queue") renderQueueFull();
+}
+
+/* ───────────────────────── Wire up ───────────────────────── */
+function bind() {
+  $$(".nav-item").forEach((b) => (b.onclick = () => switchView(b.dataset.view)));
+  $("#pickFiles").onclick = () => $("#fileInput").click();
+  $("#pickFolder").onclick = () => $("#folderInput").click();
+  $("#dropzone").onclick = (e) => { if (e.target.closest(".dz-buttons")) return; $("#fileInput").click(); };
+  $("#fileInput").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
+  $("#folderInput").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
+
+  const dz = $("#dropzone");
+  ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
+  ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
+  dz.addEventListener("drop", (e) => { if (e.dataTransfer?.files) addFiles(e.dataTransfer.files); });
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => { e.preventDefault(); if (e.target.closest("#dropzone")) return; if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
+
+  $("#generateBtn").onclick = generateAll;
+  $("#genWorkspace").onclick = generateAll;
+  $("#previewDownload").onclick = exportAll;
+  $("#opt-zip").onchange = updateExportBar;
+  $("#resetBtn").onclick = () => {
+    if (state.running) { state.cancel = true; return; }
+    state.items.forEach((i) => { if (i.thumbUrl) URL.revokeObjectURL(i.thumbUrl); if (i.result) URL.revokeObjectURL(i.result); });
+    state.items = []; state.selectedId = null;
+    renderQueue(); renderStats(); renderPreview(); updateExportBar();
+    setGenEnabled(false);
+    toast("Cleared.");
+  };
+
+  $("#bgMode").onchange = applyBgRules;
+  $("#opt-transparent").onchange = (e) => {
+    $("#bgMode").value = e.target.checked ? "transparent" : "original";
+    applyBgRules();
+  };
+  $("#quality").oninput = (e) => ($("#qualityVal").textContent = e.target.value + "%");
+  $("#customBg").onchange = (e) => { state.customBgFile = e.target.files?.[0] ?? null; };
+
+  // persist properties for returning users
+  ["#bgMode", "#bgColor", "#format", "#quality", "#opt-preserve", "#opt-zip", "#ai-level", "#ai-enhance", "#ai-colorcorrect", "#ai-strength", "#ai-mode"]
+    .forEach((s) => $(s)?.addEventListener("change", persistSettings));
+
+  $("#slider").addEventListener("input", (e) => setSplit(e.target.value));
+  $$("#previewMode .seg-btn").forEach((b) => (b.onclick = () => {
+    $$("#previewMode .seg-btn").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); setPreviewMode(b.dataset.mode);
+  }));
+
+  $("#exportZip").onclick = exportAll;
+  $("#exportSheet").onclick = buildSheet;
+  $("#downloadSheet").onclick = () => $("#sheetCanvas").toBlob((b) => downloadBlob(b, "team_grid.png"));
+
+  window.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !$("#generateBtn").disabled) generateAll();
+  });
+}
+
+$("#previewStage")?.addEventListener("dblclick", () => {
+  const item = state.items.find((i) => i.id === state.selectedId);
+  if (item?.result) { downloadDataUrl(item.result, item.outName || item.name); toast("Downloaded."); }
+});
+
+/* ───────────────────────── Boot ───────────────────────── */
+bind();
+loadSettings();
+renderPresetPicker();
+renderPresetCards();
+renderModelCards();
+renderStats();
+renderQueue();
+applyBgRules();
+initEngine();
+
+</script>
+</body>
+</html>
